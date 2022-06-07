@@ -5,9 +5,7 @@ const ytdl = require("ytdl-core");
 
 
 const player = createAudioPlayer();
-const test = ytdl('https://www.youtube.com/watch?v=a51VH9BYzZA');
-//const resource = createAudioResource('/home/ask/code/bot/audio.mp3', {inlineVolume: true});
-//const resource = createAudioResource(test, {inlineVolume: true});
+const test = './second-of-silence.mp3';
 let resource = createAudioResource(test, {inlineVolume: true});
 
 const name = "Sp, ";
@@ -37,10 +35,10 @@ const client = new Client({
 // Variables and such. 
 var talking = new Set(); 
 var playlist = [];
-var PLAY = false;
 
 client.once('ready',()=> {
 	console.log('Ready!');
+	   player.play(resource); // <==
 	setInterval( () => {
 		if (talking.size > 0) {
 			resource.volume.setVolume(0.1);
@@ -51,6 +49,10 @@ client.once('ready',()=> {
 	},1);
 });
 
+function kick() {
+	resource = createAudioResource(test, {inlineVolume: true});
+	player.play(resource);
+}
 
 client.on('messageCreate', async msg => {
 	console.log('A message was sent.');
@@ -66,16 +68,14 @@ client.on('messageCreate', async msg => {
 				selfDeaf: false,
 				selfMute: false,
 			});
-
-			console.log('HACK');
-			connection.subscribe(player);
-
+			   connection.subscribe(player); // <== 
 		}
 		try {
 			await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
 			// if ID == bot ID then return, or something. 
 			// Ended up not being necessary, bot doesn't register when it starts talking. 
 			// Don't know why but not going to look a gift horse in the mouth for the moment. 
+			// Should look into it at a future date though. 
 			connection.receiver.speaking.on("start", (userId) => {
 				console.log(`${userId} start`);
 				talking.add(`${userId}`)
@@ -89,44 +89,55 @@ client.on('messageCreate', async msg => {
 			console.warn(error);
 		}
 	}
-	else if (msg.content === name+'is anyone talking?') {
-		if (talking.size === 0) // Alternatively, could just check if greater than one over here. 
-			console.log("No.")
-		else
-			console.log("Yes.")
-	}
+	/*
 	else if (msg.content === name+'play.') {
-		PLAY = true;
-		console.log("The value of PLAY is "+PLAY+'.');
-			//player.play(resource); // Not sure of this one. 
+		if (playlist.length > 0) {
+			resource = createAudioResource(ytdl(playlist[0]), {inlineVolume: true});
+			player.play(resource);
+			playlist.shift();
+		}
+		else {
+			msg.reply("Can not play, nothing in the playlist.");
+		}
 	}
-	else if (msg.content === name+'play the test song.') {
-		PLAY = true;
-		player.play(resource);
+	*/
+	else if (msg.content === name+'kick.') {
+		kick();
 	}
 	else if (msg.content === name+'skip.') {
 		player.stop();
 	}
 	else if (msg.content === name+'stop.') {
-		PLAY = false;
 		player.pause();
-		console.log("The value of PLAY is "+PLAY+'.');
+	}
+	else if (msg.content === name+'play.') {
+		player.unpause();
+	}
+	else if (msg.content.startsWith(name+'jump `') && msg.content.endsWith('`.')) {
+		playlist.unshift(msg.content.slice(name.length+6,-2));
+		console.log('Unshifted '+msg.content.slice(name.length+6,-2));
 	}
 	else if (msg.content.startsWith(name+'push `') && msg.content.endsWith('`.')) {
 		playlist.push(msg.content.slice(name.length+6,-2));
 		console.log('Pushed '+msg.content.slice(name.length+6,-2));
 	}
+	else if (msg.content.startsWith(name+'show playlist.')) {
+		console.log(playlist);
+	}
 });
 
 player.on(AudioPlayerStatus.Idle, () => {
-	console.log("The value of PLAY is "+PLAY+'.');
-	if (PLAY && playlist.length > 0){
-		console.log("Playlist[0] is: "+playlist[0]+".");
-		resource = createAudioResource(ytdl(playlist[0]), {inlineVolume: true});
-		player.play(resource);
-		playlist.shift();
+	try {
+		if (playlist.length > 0){
+			console.log("Playlist[0] is: "+playlist[0]+".");
+			resource = createAudioResource(ytdl(playlist[0]), {inlineVolume: true});
+			player.play(resource);
+			playlist.shift();
+		}
 	}
-
+	catch (error) {
+		console.log("The error was CAUGHT!");
+	} // Why isn't this working? 
 });
 
 client.login(token);
