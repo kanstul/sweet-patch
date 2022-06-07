@@ -8,7 +8,7 @@ const player = createAudioPlayer();
 const test = './second-of-silence.mp3';
 let resource = createAudioResource(test, {inlineVolume: true});
 
-const name = "Sp, ";
+const name = "Muze, ";
 
 
 const client = new Client({ 
@@ -37,16 +37,17 @@ var talking = new Set();
 var playlist = [];
 var LOOP = false;
 var LOOP_FRONT = false;
+var volume = 1.0;
 
 client.once('ready',()=> {
 	console.log('Ready!');
 	   player.play(resource); // <==
 	setInterval( () => {
 		if (talking.size > 0) {
-			resource.volume.setVolume(0.1);
+			resource.volume.setVolume(0.1*volume);
 		}
 		else {
-			resource.volume.setVolume(1.0);
+			resource.volume.setVolume(1.0*volume);
 		}
 	},1);
 });
@@ -151,6 +152,15 @@ client.on('messageCreate', async msg => {
 	}
 	else if (msg.content === name+'loop front off.') {
 		LOOP_FRONT = false;
+	}
+	else if (msg.content === name+'what\'s the volume?') {
+		msg.reply(""+volume);
+	}
+	else if (msg.content.startsWith(name+'set volume to `') && msg.content.endsWith('`.')) {
+		//playlist.push(msg.content.slice(name.length+6,-2));
+		old_volume = volume;
+		volume = parseFloat(msg.content.slice(name.length+15,-2));
+		volume = (!isNaN(volume))? volume : old_volume;
 	}
 });
 
