@@ -10,6 +10,8 @@ const test = ytdl('https://www.youtube.com/watch?v=a51VH9BYzZA');
 //const resource = createAudioResource(test, {inlineVolume: true});
 let resource = createAudioResource(test, {inlineVolume: true});
 
+const name = "Sp, ";
+
 
 const client = new Client({ 
 	intents: [
@@ -33,25 +35,28 @@ const client = new Client({
 });
 
 // Variables and such. 
-var talking = new Set();
-var playlist = []
+var talking = new Set(); 
+var playlist = [];
+var PLAY = false;
 
 client.once('ready',()=> {
 	console.log('Ready!');
 	setInterval( () => {
-		if (talking.size > 0)
+		if (talking.size > 0) {
 			resource.volume.setVolume(0.1);
-		else
+		}
+		else {
 			resource.volume.setVolume(1.0);
+		}
 	},1);
 });
 
 
 client.on('messageCreate', async msg => {
 	console.log('A message was sent.');
-	if (msg.author.bot || !msg.content.startsWith('Muse, '))
+	if (msg.author.bot || !msg.content.startsWith(name+''))
 		return;
-	if (msg.content === 'Muse, can you follow me?'){
+	if (msg.content === name+'can you follow me?'){
 		var connection = getVoiceConnection(msg.guildId)
 		if (true) {
 			connection = joinVoiceChannel({
@@ -69,6 +74,8 @@ client.on('messageCreate', async msg => {
 		try {
 			await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
 			// if ID == bot ID then return, or something. 
+			// Ended up not being necessary, bot doesn't register when it starts talking. 
+			// Don't know why but not going to look a gift horse in the mouth for the moment. 
 			connection.receiver.speaking.on("start", (userId) => {
 				console.log(`${userId} start`);
 				talking.add(`${userId}`)
@@ -82,39 +89,38 @@ client.on('messageCreate', async msg => {
 			console.warn(error);
 		}
 	}
-	else if (msg.content === 'Muse, is anyone talking?') {
+	else if (msg.content === name+'is anyone talking?') {
 		if (talking.size === 0) // Alternatively, could just check if greater than one over here. 
 			console.log("No.")
 		else
 			console.log("Yes.")
 	}
-	else if (msg.content === 'Muse, play the test song.') {
-		console.log('Playing.');
+	else if (msg.content === name+'play.') {
+		PLAY = true;
+		console.log("The value of PLAY is "+PLAY+'.');
+			//player.play(resource); // Not sure of this one. 
+	}
+	else if (msg.content === name+'play the test song.') {
+		PLAY = true;
 		player.play(resource);
-		console.log('Played.');
 	}
-	else if (msg.content === 'Muse, reduce the volume.') {
-		resource.volume.setVolume(0.1);
-	}
-	else if (msg.content === 'Muse, raise the volume.') {
-		resource.volume.setVolume(1.0);
-	}
-	else if (msg.content === 'Muse, stop playing.') {
+	else if (msg.content === name+'skip.') {
 		player.stop();
 	}
-	else if (msg.content === 'Muse, delete this command later.') {
-		playlist.push('https://www.youtube.com/watch?v=wU10eqcK5AM');
-		//playlist.push(test);
-		console.log(playlist.length);
+	else if (msg.content === name+'stop.') {
+		PLAY = false;
+		player.pause();
+		console.log("The value of PLAY is "+PLAY+'.');
 	}
-	else if (msg.content.startsWith('Muse, push `') && msg.content.endsWith('`.')) {
-		playlist.push(msg.content.slice(12,-2));
-		console.log('Pushed '+msg.content.slice(12,-2));
+	else if (msg.content.startsWith(name+'push `') && msg.content.endsWith('`.')) {
+		playlist.push(msg.content.slice(name.length+6,-2));
+		console.log('Pushed '+msg.content.slice(name.length+6,-2));
 	}
 });
 
 player.on(AudioPlayerStatus.Idle, () => {
-	if (playlist.length > 0){
+	console.log("The value of PLAY is "+PLAY+'.');
+	if (PLAY && playlist.length > 0){
 		console.log("Playlist[0] is: "+playlist[0]+".");
 		resource = createAudioResource(ytdl(playlist[0]), {inlineVolume: true});
 		player.play(resource);
