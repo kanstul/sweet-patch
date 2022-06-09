@@ -8,7 +8,7 @@ const player = createAudioPlayer();
 const test = './second-of-silence.mp3';
 let resource = createAudioResource(test, {inlineVolume: true});
 
-const name = "Sp, ";
+const name = "Muze, ";
 
 
 const client = new Client({ 
@@ -37,16 +37,17 @@ var talking = new Set();
 var playlist = [];
 var LOOP = false;
 var LOOP_FRONT = false;
+var volume = 1.0;
 
 client.once('ready',()=> {
 	console.log('Ready!');
 	   player.play(resource); // <==
 	setInterval( () => {
 		if (talking.size > 0) {
-			resource.volume.setVolume(0.1);
+			resource.volume.setVolume(0.1*volume);
 		}
 		else {
-			resource.volume.setVolume(1.0);
+			resource.volume.setVolume(1.0*volume);
 		}
 	},1);
 });
@@ -103,33 +104,36 @@ client.on('messageCreate', async msg => {
 	else if (msg.content === name+'play.') {
 		player.unpause();
 	}
-	else if (playlist.length < 10 && msg.content.startsWith(name+'jump `') && msg.content.endsWith('`.')) {
+	else if (playlist.length < 50 && msg.content.startsWith(name+'jump `') && msg.content.endsWith('`.')) {
 		playlist.unshift(msg.content.slice(name.length+6,-2));
 		console.log('Unshifted '+msg.content.slice(name.length+6,-2));
 	}
-	else if (playlist.length < 10 && msg.content.startsWith(name+'push `') && msg.content.endsWith('`.')) {
+	else if (playlist.length < 50 && msg.content.startsWith(name+'push `') && msg.content.endsWith('`.')) {
 		playlist.push(msg.content.slice(name.length+6,-2));
 		console.log('Pushed '+msg.content.slice(name.length+6,-2));
 	}
-	else if (msg.content.startsWith(name+'show playlist.')) {
+	else if (msg.content === (name+'show playlist.')) {
 		console.log(playlist);
 	}
-	else if (msg.content.startsWith(name+'what\'s on the list?')) {
+	else if (msg.content === (name+'what\'s on the list?')) {
 		response = [];
-		//playlist.forEach(song => { ytdl.getInfo(song).then(info => {response.push(info.videoDetails.title); console.log(info.videoDetails.title);})}); // What a mess. 
-		//for (song of playlist) 
 		for (i=0;i<playlist.length;++i)
 		{
 			song = playlist[i];
-			info = await ytdl.getInfo(song);
-			response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
+			try {
+				info = await ytdl.getInfo(song);
+				response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
+			} catch {
+				// This isn't tripping for some reason, I don't know why. 
+				response.push('Invalid song.');
+			}
 		}
 		console.log(response);
 		console.log('Test.');
 		if (response.length === 0)
 			msg.reply("Nothing.");
 		else
-			msg.reply(response.join('\n'));
+			msg.reply('\`\`\`'+response.join('\n')+'\`\`\`');
 	}
 	else if (msg.content.startsWith(name+'test.')) {
 		//console.log(ytdl.getInfo('https://www.youtube.com/watch?v=vQHVGXdcqEQ', (info) => {console.log(info.videoDetails.title)}));
@@ -149,6 +153,15 @@ client.on('messageCreate', async msg => {
 	else if (msg.content === name+'loop front off.') {
 		LOOP_FRONT = false;
 	}
+	else if (msg.content === name+'what\'s the volume?') {
+		msg.reply(""+volume);
+	}
+	else if (msg.content.startsWith(name+'set volume to `') && msg.content.endsWith('`.')) {
+		//playlist.push(msg.content.slice(name.length+6,-2));
+		old_volume = volume;
+		volume = parseFloat(msg.content.slice(name.length+15,-2));
+		volume = (!isNaN(volume))? volume : old_volume;
+	}
 });
 
 player.on(AudioPlayerStatus.Idle, () => {
@@ -158,17 +171,17 @@ player.on(AudioPlayerStatus.Idle, () => {
 		console.log("Playlist[0] is: "+playlist[0]+".");
 		//song = ytdl(playlist[0]).catch((error) => {console.error(error)})
 		song = null;
-		const promise1 = new Promise((resolve,reject) => {
+		try {
 			song = ytdl(playlist[0])
-		});
-		promise1.catch((error) => {
-			console.error(error);
-		});
-		if (song === null){
-			console.log("Ladies and gentlemen.");
+		}
+		catch (e) {
+			// None of this actually executes; why is that? 
+			console.error(e);
+			console.log('Bonk.');
 			return;
 		}
 		resource = createAudioResource(song, {inlineVolume: true});
+		console.log("We just created an audio resource of"+song+".");
 		player.play(resource);
 		if (!LOOP_FRONT)
 			playlist.shift();

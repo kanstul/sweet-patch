@@ -50,18 +50,99 @@ client.once('ready',()=> {
 			resource.volume.setVolume(1.0*volume);
 		}
 	},1);
+	/*
+	while (true) {
+		if (talking.size > 0)
+			resource.volume.setVolume(0.1*volume);
+		else
+			resource.volume.setVolume(1.0*volume);
+	}
+	*/
+	/*
+	thread(true, () => {
+		if (talking.size > 0) {
+			resource.volume.setVolume(0.1*volume);
+		}
+		else {
+			resource.volume.setVolume(1.0*volume);
+		}
+	});
+	*/
 });
+
+async function thread(flag,callback) {
+	while (flag)
+		callback();
+}
 
 function kick() {
 	resource = createAudioResource(test, {inlineVolume: true});
 	player.play(resource);
 }
 
+async function list(response) {
+	for (i=0;i<playlist.length;++i)
+	{
+		song = playlist[i];
+		try {
+			info = await ytdl.getInfo(song);
+			response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
+		} catch (e) {
+			// This isn't tripping for some reason, I don't know why. 
+			console.error(e);
+			response.push('Invalid song.');
+		}
+	}
+	return response;
+}
+
+client.on('interactionCreate', async interaction => {
+	if (!interaction.isCommand()) return;
+
+	const { commandName } = interaction;
+	
+	if (commandName === 'list') {
+		response = [];
+		await list(response);
+
+		if (response.length === 0)
+			interaction.reply("Nothing.");
+		else
+			interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+	}
+	/*
+	else if (commandName.startsWith(name+'set volume to `') && msg.content.endsWith('`.')) {
+		old_volume = volume;
+		volume = parseFloat(msg.content.slice(name.length+15,-2));
+		volume = (!isNaN(volume))? volume : old_volume; 
+	*/
+	else if (commandName === 'kick') {
+		kick();
+		interaction.reply('\`*Rattle*\`');
+	}
+	else if (commandName === 'skip') {
+		player.stop();
+		interaction.reply('Skipping.');
+	}
+	else if (commandName === 'stop') {
+		player.pause();
+		interaction.reply('Paused.');
+	}
+	else if (commandName === 'play') {
+		player.unpause();
+		interaction.reply('Resumed.');
+	}
+});
+
+
 client.on('messageCreate', async msg => {
 	console.log('A message was sent.');
 	if (msg.author.bot || !msg.content.startsWith(name+''))
 		return;
-	if (msg.content === name+'can you follow me?'){
+	if (msg.content === name+'test.'){
+		msg.reply('Online.');
+	}
+	else if (msg.content === name+'can you follow me?'){
 		var connection = getVoiceConnection(msg.guildId)
 		if (true) {
 			connection = joinVoiceChannel({
@@ -117,6 +198,8 @@ client.on('messageCreate', async msg => {
 	}
 	else if (msg.content === (name+'what\'s on the list?')) {
 		response = [];
+		await list(response);
+		/*
 		for (i=0;i<playlist.length;++i)
 		{
 			song = playlist[i];
@@ -130,6 +213,7 @@ client.on('messageCreate', async msg => {
 		}
 		console.log(response);
 		console.log('Test.');
+		*/
 		if (response.length === 0)
 			msg.reply("Nothing.");
 		else
@@ -157,10 +241,9 @@ client.on('messageCreate', async msg => {
 		msg.reply(""+volume);
 	}
 	else if (msg.content.startsWith(name+'set volume to `') && msg.content.endsWith('`.')) {
-		//playlist.push(msg.content.slice(name.length+6,-2));
 		old_volume = volume;
 		volume = parseFloat(msg.content.slice(name.length+15,-2));
-		volume = (!isNaN(volume))? volume : old_volume;
+		volume = (!isNaN(volume))? volume : old_volume; 
 	}
 });
 
