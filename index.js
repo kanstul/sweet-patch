@@ -15,18 +15,6 @@ const client = new Client({
 	intents: [
 		Intents.FLAGS.GUILDS,
 		Intents.FLAGS.GUILD_MEMBERS,
-		//Intents.FLAGS.GUILD_BANS,
-		//Intents.FLAGS.GUILD_INTEGRATIONS,
-		//Intents.FLAGS.GUILD_WEBHOOKS,
-		//Intents.FLAGS.GUILD_INVITES,
-		Intents.FLAGS.GUILD_VOICE_STATES,
-		//Intents.FLAGS.GUILD_PRESENCES,
-		//Intents.FLAGS.GUILD_MESSAGES,
-		//Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-		//Intents.FLAGS.GUILD_MESSAGE_TYPING,
-		//Intents.FLAGS.DIRECT_MESSAGES,
-		//Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
-		//Intents.FLAGS.DIRECT_MESSAGE_TYPING,
 		Intents.FLAGS.GUILD_VOICE_STATES,
 	],
 });
@@ -36,12 +24,15 @@ var TALKING = new Set();
 var PLAYLIST = [];
 var LOOP = false;
 var LOOP_FRONT = false;
-var volume = 1.0;
+var VOLUME = 1.0;
 var AUTO_PLAY = true;
 var CURRENTLY_PLAYING = "Nothing played yet.";
 var DAMP = 0.1;
 var HISTORY = [];
 var MAX_HISTORY_SIZE = 100;
+var MAX_PLAYLIST_SIZE = 50;
+	var PLAYING = false; // Find a better way to do this. 
+// Variables and such. 
 
 client.once('ready', ()=> {
 	//global.kick(); // Have to use global rather than window rather than eval. 
@@ -49,10 +40,10 @@ client.once('ready', ()=> {
 	   player.play(resource); // <==
 	setInterval( () => {
 		if (TALKING.size > 0) {
-			resource.volume.setVolume(DAMP*volume);
+			resource.volume.setVolume(DAMP*VOLUME);
 		}
 		else {
-			resource.volume.setVolume(volume);
+			resource.volume.setVolume(VOLUME);
 		}
 	},1);
 });
@@ -97,6 +88,7 @@ client.on('interactionCreate', async interaction => {
 		interaction.reply('\`*Rattle*\`');
 	}
 	else if (commandName === 'skip') {
+		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and AUTO_PLAY. 
 		player.stop();
 		interaction.reply('Skipping.');
 	}
@@ -143,21 +135,30 @@ client.on('interactionCreate', async interaction => {
 		interaction.reply(CURRENTLY_PLAYING);
 	}
 	else if (commandName === 'set'){
-		response = 'Volume was \`'+volume+'\`, is '
-		volume = interaction.options.getNumber('level') / 10.0;
-		response = response.concat('now \`'+volume+'\`.');
+		response = 'Volume was \`'+VOLUME+'\`, is '
+		VOLUME = interaction.options.getNumber('level') / 10.0;
+		response = response.concat('now \`'+VOLUME+'\`.');
 		interaction.reply(response);
 	}
-	else if (commandName === 'push'){
-		console.log(interaction.options.getString('song'));
+	else if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'push'){
 		PLAYLIST.push(interaction.options.getString('song'));
-		if (AUTO_PLAY && PLAYLIST.size === 1)
+		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) {
+			interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
+			console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
 			play_front();
+		}
+		else
+			interaction.reply("Couldn't add, playlist full.");
 	}
-	else if (commandName === 'jump'){
+	else if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'jump'){
 		PLAYLIST.unshift(interaction.options.getString('song'));
-		if (AUTO_PLAY && PLAYLIST.size === 1)
+		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) {
+			interaction.reply("Prepended "+PLAYLIST[0]+".");
+			console.log("Prepended "+PLAYLIST[0]+".");
 			play_front();
+		}
+		else
+			interaction.reply("Couldn't add, playlist full.");
 	}
 	else if (commandName === 'damp'){
 		response = 'Volume was \`'+DAMP+'\`, is '
@@ -174,16 +175,22 @@ client.on('interactionCreate', async interaction => {
 		else
 			interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
 	}
+	else if (commandName === 'auto'){
+		AUTO_PLAY = !AUTO_PLAY;
+		interaction.reply("Auto play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
+	}
 });
 
 
 player.on(AudioPlayerStatus.Idle, () => {
+	PLAYING = false;
 	play_front();
 });
 
 function play_front() {
 	console.log('Play_front()');
 	if (PLAYLIST.length > 0){
+		PLAYING = true;
 		if (LOOP)
 			PLAYLIST.push(PLAYLIST[0]);
 		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
@@ -213,3 +220,6 @@ function play_front() {
 }
 
 client.login(token);
+
+// TODO: Add a function that deletes a song given an index.  (Not hard; have headache.) 
+// TODO: Add a function to delete the last song.  (What to name it?) 
