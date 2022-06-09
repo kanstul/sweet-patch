@@ -17,7 +17,7 @@ const commands = [
 	new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
 	new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
 	new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
-	//new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'), // This is covered by `skip`. 
+	new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
 	// Use commas. 
 ]
 	.map(command => command.toJSON());

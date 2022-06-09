@@ -179,6 +179,9 @@ client.on('interactionCreate', async interaction => {
 		AUTO_PLAY = !AUTO_PLAY;
 		interaction.reply("Auto play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
 	}
+	else if (commandName == 'next'){ 
+		play_front(); // Maybe I should just fold this into `skip`? 
+	}
 });
 
 
