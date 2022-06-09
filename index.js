@@ -38,8 +38,11 @@ var playlist = [];
 var LOOP = false;
 var LOOP_FRONT = false;
 var volume = 1.0;
+var AUTO_PLAY = true;
+var CURRENTLY_PLAYING = "Nothing played yet.";
 
-client.once('ready',()=> {
+client.once('ready', ()=> {
+	//global.kick(); // Have to use global rather than window rather than eval. 
 	console.log('Ready!');
 	   player.play(resource); // <==
 	setInterval( () => {
@@ -50,30 +53,7 @@ client.once('ready',()=> {
 			resource.volume.setVolume(1.0*volume);
 		}
 	},1);
-	/*
-	while (true) {
-		if (talking.size > 0)
-			resource.volume.setVolume(0.1*volume);
-		else
-			resource.volume.setVolume(1.0*volume);
-	}
-	*/
-	/*
-	thread(true, () => {
-		if (talking.size > 0) {
-			resource.volume.setVolume(0.1*volume);
-		}
-		else {
-			resource.volume.setVolume(1.0*volume);
-		}
-	});
-	*/
 });
-
-async function thread(flag,callback) {
-	while (flag)
-		callback();
-}
 
 function kick() {
 	resource = createAudioResource(test, {inlineVolume: true});
@@ -132,6 +112,40 @@ client.on('interactionCreate', async interaction => {
 		player.unpause();
 		interaction.reply('Resumed.');
 	}
+	else if (commandName === 'join'){
+		var connection = getVoiceConnection(interaction.guildId)
+		if (true) {
+			connection = joinVoiceChannel({
+				channelId: interaction.member.voice.channelId,
+				guildId: interaction.guildId,
+				adapterCreator: interaction.guild.voiceAdapterCreator,
+				selfDeaf: false,
+				selfMute: false,
+			});
+			   connection.subscribe(player); // <== 
+		}
+		try {
+			await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
+			// if ID == bot ID then return, or something. 
+			// Ended up not being necessary, bot doesn't register when it starts talking. 
+			// Don't know why but not going to look a gift horse in the mouth for the moment. 
+			// Should look into it at a future date though. 
+			connection.receiver.speaking.on("start", (userId) => {
+				console.log(`${userId} start`);
+				talking.add(`${userId}`)
+			});
+			connection.receiver.speaking.on("end", (userId) => {
+				console.log(`${userId} end`);
+				talking.delete(`${userId}`)
+			});
+			interaction.reply('Joined.');
+		} catch(error) {
+			console.warn(error);
+		}
+	}
+	else if (commandName == 'what'){
+		interaction.reply(CURRENTLY_PLAYING);
+	}
 });
 
 
@@ -188,10 +202,14 @@ client.on('messageCreate', async msg => {
 	else if (playlist.length < 50 && msg.content.startsWith(name+'jump `') && msg.content.endsWith('`.')) {
 		playlist.unshift(msg.content.slice(name.length+6,-2));
 		console.log('Unshifted '+msg.content.slice(name.length+6,-2));
+		if (AUTO_PLAY && playlist.size === 1)
+			play_front();
 	}
 	else if (playlist.length < 50 && msg.content.startsWith(name+'push `') && msg.content.endsWith('`.')) {
 		playlist.push(msg.content.slice(name.length+6,-2));
 		console.log('Pushed '+msg.content.slice(name.length+6,-2));
+		if (AUTO_PLAY && playlist.length === 1) 
+			play_front();
 	}
 	else if (msg.content === (name+'show playlist.')) {
 		console.log(playlist);
@@ -199,28 +217,12 @@ client.on('messageCreate', async msg => {
 	else if (msg.content === (name+'what\'s on the list?')) {
 		response = [];
 		await list(response);
-		/*
-		for (i=0;i<playlist.length;++i)
-		{
-			song = playlist[i];
-			try {
-				info = await ytdl.getInfo(song);
-				response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
-			} catch {
-				// This isn't tripping for some reason, I don't know why. 
-				response.push('Invalid song.');
-			}
-		}
-		console.log(response);
-		console.log('Test.');
-		*/
 		if (response.length === 0)
 			msg.reply("Nothing.");
 		else
 			msg.reply('\`\`\`'+response.join('\n')+'\`\`\`');
 	}
 	else if (msg.content.startsWith(name+'test.')) {
-		//console.log(ytdl.getInfo('https://www.youtube.com/watch?v=vQHVGXdcqEQ', (info) => {console.log(info.videoDetails.title)}));
 		ytdl.getInfo('https://www.youtube.com/watch?v=vQHVGXdcqEQ').then(info => {console.log(info.videoDetails.title)});
 	}
 	else if (msg.content === name+'loop.'){
@@ -245,17 +247,36 @@ client.on('messageCreate', async msg => {
 		volume = parseFloat(msg.content.slice(name.length+15,-2));
 		volume = (!isNaN(volume))? volume : old_volume; 
 	}
+	else if (msg.content === name+'what\'s playing?') {
+		// Could potentially be used to spam a chat by a user who is muted. 
+		/*
+		reponse = "Invalid song.";
+		try {
+			info = await ytdl.getInfo(CURRENTLY_PLAYING);
+			response = ("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
+		} catch (e) {
+			console.error(e);
+		}
+		msg.reply(response);
+		*/
+		msg.reply(CURRENTLY_PLAYING);
+		// Could potentially be used to spam a chat by a user who is muted. 
+	}
 });
 
 player.on(AudioPlayerStatus.Idle, () => {
+	play_front();
+});
+
+function play_front() {
+	console.log('Play_front()');
 	if (playlist.length > 0){
 		if (LOOP)
 			playlist.push(playlist[0]);
 		console.log("Playlist[0] is: "+playlist[0]+".");
-		//song = ytdl(playlist[0]).catch((error) => {console.error(error)})
 		song = null;
 		try {
-			song = ytdl(playlist[0])
+			song = ytdl(playlist[0]);
 		}
 		catch (e) {
 			// None of this actually executes; why is that? 
@@ -264,11 +285,16 @@ player.on(AudioPlayerStatus.Idle, () => {
 			return;
 		}
 		resource = createAudioResource(song, {inlineVolume: true});
+			// !!! 
+			CURRENTLY_PLAYING = playlist[0]; // WATCH OUT: VARIABLE'S GLOBAL.  
+			// SHOULD BE FINE SINCE IN ORDER TO GET HERE, MUST BE A YOUTUBE VIDEO. 
 		console.log("We just created an audio resource of"+song+".");
 		player.play(resource);
 		if (!LOOP_FRONT)
 			playlist.shift();
 	}
-});
+}
 
 client.login(token);
+
+// TODO: Add song history. 

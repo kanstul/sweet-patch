@@ -38,8 +38,9 @@ var playlist = [];
 var LOOP = false;
 var LOOP_FRONT = false;
 var volume = 1.0;
+var AUTO_PLAY = true;
 
-client.once('ready',()=> {
+client.once('ready', ()=> {
 	console.log('Ready!');
 	   player.play(resource); // <==
 	setInterval( () => {
@@ -52,16 +53,79 @@ client.once('ready',()=> {
 	},1);
 });
 
+//	async function thread(flag,callback) {
+//		while (flag)
+//			callback();
+//	}
+
 function kick() {
 	resource = createAudioResource(test, {inlineVolume: true});
 	player.play(resource);
 }
 
+async function list(response) {
+	for (i=0;i<playlist.length;++i)
+	{
+		song = playlist[i];
+		try {
+			info = await ytdl.getInfo(song);
+			response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
+		} catch (e) {
+			// This isn't tripping for some reason, I don't know why. 
+			console.error(e);
+			response.push('Invalid song.');
+		}
+	}
+	return response;
+}
+
+client.on('interactionCreate', async interaction => {
+	if (!interaction.isCommand()) return;
+
+	const { commandName } = interaction;
+	
+	if (commandName === 'list') {
+		response = [];
+		await list(response);
+
+		if (response.length === 0)
+			interaction.reply("Nothing.");
+		else
+			interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+	}
+	/*
+	else if (commandName.startsWith(name+'set volume to `') && msg.content.endsWith('`.')) {
+		old_volume = volume;
+		volume = parseFloat(msg.content.slice(name.length+15,-2));
+		volume = (!isNaN(volume))? volume : old_volume; 
+	*/
+	else if (commandName === 'kick') {
+		kick();
+		interaction.reply('\`*Rattle*\`');
+	}
+	else if (commandName === 'skip') {
+		player.stop();
+		interaction.reply('Skipping.');
+	}
+	else if (commandName === 'stop') {
+		player.pause();
+		interaction.reply('Paused.');
+	}
+	else if (commandName === 'play') {
+		player.unpause();
+		interaction.reply('Resumed.');
+	}
+});
+
+
 client.on('messageCreate', async msg => {
 	console.log('A message was sent.');
 	if (msg.author.bot || !msg.content.startsWith(name+''))
 		return;
-	if (msg.content === name+'can you follow me?'){
+	if (msg.content === name+'test.'){
+		msg.reply('Online.');
+	}
+	else if (msg.content === name+'can you follow me?'){
 		var connection = getVoiceConnection(msg.guildId)
 		if (true) {
 			connection = joinVoiceChannel({
@@ -107,36 +171,27 @@ client.on('messageCreate', async msg => {
 	else if (playlist.length < 50 && msg.content.startsWith(name+'jump `') && msg.content.endsWith('`.')) {
 		playlist.unshift(msg.content.slice(name.length+6,-2));
 		console.log('Unshifted '+msg.content.slice(name.length+6,-2));
+		if (AUTO_PLAY && playlist.size === 1)
+			play_front();
 	}
 	else if (playlist.length < 50 && msg.content.startsWith(name+'push `') && msg.content.endsWith('`.')) {
 		playlist.push(msg.content.slice(name.length+6,-2));
 		console.log('Pushed '+msg.content.slice(name.length+6,-2));
+		if (AUTO_PLAY && playlist.length === 1) 
+			play_front();
 	}
 	else if (msg.content === (name+'show playlist.')) {
 		console.log(playlist);
 	}
 	else if (msg.content === (name+'what\'s on the list?')) {
 		response = [];
-		for (i=0;i<playlist.length;++i)
-		{
-			song = playlist[i];
-			try {
-				info = await ytdl.getInfo(song);
-				response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
-			} catch {
-				// This isn't tripping for some reason, I don't know why. 
-				response.push('Invalid song.');
-			}
-		}
-		console.log(response);
-		console.log('Test.');
+		await list(response);
 		if (response.length === 0)
 			msg.reply("Nothing.");
 		else
 			msg.reply('\`\`\`'+response.join('\n')+'\`\`\`');
 	}
 	else if (msg.content.startsWith(name+'test.')) {
-		//console.log(ytdl.getInfo('https://www.youtube.com/watch?v=vQHVGXdcqEQ', (info) => {console.log(info.videoDetails.title)}));
 		ytdl.getInfo('https://www.youtube.com/watch?v=vQHVGXdcqEQ').then(info => {console.log(info.videoDetails.title)});
 	}
 	else if (msg.content === name+'loop.'){
@@ -157,22 +212,33 @@ client.on('messageCreate', async msg => {
 		msg.reply(""+volume);
 	}
 	else if (msg.content.startsWith(name+'set volume to `') && msg.content.endsWith('`.')) {
-		//playlist.push(msg.content.slice(name.length+6,-2));
 		old_volume = volume;
 		volume = parseFloat(msg.content.slice(name.length+15,-2));
-		volume = (!isNaN(volume))? volume : old_volume;
+		volume = (!isNaN(volume))? volume : old_volume; 
 	}
 });
 
+const DELETETHIS = () => {play_front()};
+
 player.on(AudioPlayerStatus.Idle, () => {
+	if (playlist.length > 0)
+		play_front();
+	else while (true) // !!! 
+	{
+		console.log("Loop.");
+		await setTimeout(DELETETHIS,1000);
+	}
+});
+
+function play_front() {
+	console.log('Play_front()');
 	if (playlist.length > 0){
 		if (LOOP)
 			playlist.push(playlist[0]);
 		console.log("Playlist[0] is: "+playlist[0]+".");
-		//song = ytdl(playlist[0]).catch((error) => {console.error(error)})
 		song = null;
 		try {
-			song = ytdl(playlist[0])
+			song = ytdl(playlist[0]);
 		}
 		catch (e) {
 			// None of this actually executes; why is that? 
@@ -186,6 +252,11 @@ player.on(AudioPlayerStatus.Idle, () => {
 		if (!LOOP_FRONT)
 			playlist.shift();
 	}
-});
+}
 
 client.login(token);
+/*
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve,ms));
+}
+*/

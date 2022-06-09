@@ -9,6 +9,9 @@ const commands = [
 	new SlashCommandBuilder().setName('stop').setDescription('Pauses song.'),
 	new SlashCommandBuilder().setName('play').setDescription('Resumes song.'),
 	new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
+	new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
+	new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
+	// Use commas. 
 ]
 	.map(command => command.toJSON());
 
