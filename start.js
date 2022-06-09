@@ -18,6 +18,8 @@ const commands = [
 	new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
 	new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
 	new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
+	new SlashCommandBuilder().setName('loop').setDescription('Continually plays the current song.'),
+	new SlashCommandBuilder().setName('keep').setDescription('Played songs are immediately appended to the end of the playlist.'),
 	// Use commas. 
 ]
 	.map(command => command.toJSON());

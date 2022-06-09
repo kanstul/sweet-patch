@@ -182,6 +182,14 @@ client.on('interactionCreate', async interaction => {
 	else if (commandName == 'next'){ 
 		play_front(); // Maybe I should just fold this into `skip`? 
 	}
+	else if (commandName === 'loop'){
+		LOOP = !LOOP;
+		interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop playlist.");
+	}
+	else if (commandName === 'keep'){
+		LOOP_FRONT = !LOOP_FRONT;
+		interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
+	}
 });
 
 
@@ -194,8 +202,8 @@ function play_front() {
 	console.log('Play_front()');
 	if (PLAYLIST.length > 0){
 		PLAYING = true;
-		if (LOOP)
-			PLAYLIST.push(PLAYLIST[0]);
+		if (LOOP) // Could move this to the end and switch for CURRENTLY_PLAYING, might be better since it'll push out any invalid songs that way. 
+			PLAYLIST.push(PLAYLIST[0]); // Not particularly significant either way. 
 		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
 		song = null;
 		try {
@@ -203,6 +211,7 @@ function play_front() {
 		}
 		catch (e) {
 			// None of this actually executes; why is that? 
+			// Because broken promises, investigate at a later date. 
 			console.error(e);
 			console.log('Bonk.');
 			return;
@@ -211,7 +220,7 @@ function play_front() {
 			// !!! 
 			CURRENTLY_PLAYING = PLAYLIST[0]; // WATCH OUT: VARIABLE'S GLOBAL.  
 			// SHOULD BE FINE SINCE IN ORDER TO GET HERE, MUST BE A YOUTUBE VIDEO. 
-		console.log("We just created an audio resource of"+song+".");
+		console.log("We just created an audio resource of "+song+".");
 		player.play(resource);
 		if (!LOOP_FRONT) {
 			HISTORY.unshift(PLAYLIST[0]); // Use CURRENTLY_PLAYING instead? 
