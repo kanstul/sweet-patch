@@ -34,24 +34,31 @@ var MAX_PLAYLIST_SIZE = 50;
 	var PLAYING = false; // Find a better way to do this. 
 // Variables and such. 
 
-client.once('ready', ()=> {
-	//global.kick(); // Have to use global rather than window rather than eval. 
-	console.log('Ready!');
-	   player.play(resource); // <==
-	setInterval( () => {
-		if (TALKING.size > 0) {
-			resource.volume.setVolume(DAMP*VOLUME);
-		}
-		else {
-			resource.volume.setVolume(VOLUME);
-		}
-	},1);
-});
+///	client.once('ready', ()=> {
+///		//global.kick(); // Have to use global rather than window rather than eval. 
+///		console.log('Ready!');
+///		   player.play(resource); // <==
+///		setInterval( () => {
+///			if (TALKING.size > 0) {
+///				resource.volume.setVolume(DAMP*VOLUME);
+///			}
+///			else {
+///				resource.volume.setVolume(VOLUME);
+///			}
+///		},1);
+///	});
+
+client.once('ready',setInterval(()=>{
+	if (TALKING.size > 0)
+		resource.volume.setVolume(DAMP*VOLUME);
+	else
+		resource.volume.setVolume(VOLUME);
+}, 1)); // One line this? 
 
 function kick() {
 	resource = createAudioResource(test, {inlineVolume: true});
 	player.play(resource);
-}
+} // Don't think that we still need this.  At least map it to a brief YouTube video instead. 
 
 async function list(response,list_given) {
 	for (i=0;i<list_given.length;++i)
@@ -62,6 +69,7 @@ async function list(response,list_given) {
 			response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
 		} catch (e) {
 			// This isn't tripping for some reason, I don't know why. 
+			// Because broken promises, investigate at a later date. 
 			console.error(e);
 			response.push('Invalid song.');
 		}
@@ -70,7 +78,8 @@ async function list(response,list_given) {
 }
 
 client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
+	if (!interaction.isCommand()) return; // Watch out. 
+	// Is this deprecated? 
 
 	const { commandName } = interaction;
 	
@@ -79,7 +88,7 @@ client.on('interactionCreate', async interaction => {
 		await list(response,PLAYLIST);
 
 		if (response.length === 0)
-			interaction.reply("Nothing.");
+			interaction.reply("Playlist empty.");
 		else
 			interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
 	}
@@ -97,12 +106,12 @@ client.on('interactionCreate', async interaction => {
 		interaction.reply('Paused.');
 	}
 	else if (commandName === 'play') {
-		player.unpause();
-		interaction.reply('Resumed.');
+		player.unpause(); // Use && and fit into a single line instead? 
+		interaction.reply('Resumed.'); 
 	}
 	else if (commandName === 'join'){
 		var connection = getVoiceConnection(interaction.guildId)
-		if (true) {
+		if (true) { // if (!connection). 
 			connection = joinVoiceChannel({
 				channelId: interaction.member.voice.channelId,
 				guildId: interaction.guildId,
@@ -110,7 +119,7 @@ client.on('interactionCreate', async interaction => {
 				selfDeaf: false,
 				selfMute: false,
 			});
-			   connection.subscribe(player); // <== 
+			connection.subscribe(player); // <== 
 		}
 		try {
 			await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
@@ -119,16 +128,16 @@ client.on('interactionCreate', async interaction => {
 			// Don't know why but not going to look a gift horse in the mouth for the moment. 
 			// Should look into it at a future date though. 
 			connection.receiver.speaking.on("start", (userId) => {
-				console.log(`${userId} start`);
+				///console.log(`${userId} start`);
 				TALKING.add(`${userId}`)
 			});
 			connection.receiver.speaking.on("end", (userId) => {
-				console.log(`${userId} end`);
+				///console.log(`${userId} end`);
 				TALKING.delete(`${userId}`)
 			});
 			interaction.reply('Joined.');
 		} catch(error) {
-			console.warn(error);
+			console.warn(error); // Look into console.warn as compared to console.error. 
 		}
 	}
 	else if (commandName === 'what'){
@@ -190,13 +199,16 @@ client.on('interactionCreate', async interaction => {
 		LOOP_FRONT = !LOOP_FRONT;
 		interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
 	}
+	// else if commandName === 'halt'  // Good name; for something. 
 });
 
 
-player.on(AudioPlayerStatus.Idle, () => {
-	PLAYING = false;
-	play_front();
-});
+///	player.on(AudioPlayerStatus.Idle, () => {
+///		PLAYING = false;
+///		play_front();
+///	});
+
+player.on(AudioPlayerStatus.Idle, play_front()); // <=== 
 
 function play_front() {
 	console.log('Play_front()');
@@ -214,7 +226,9 @@ function play_front() {
 			// Because broken promises, investigate at a later date. 
 			console.error(e);
 			console.log('Bonk.');
-			return;
+			// return; Absolutely MUST NOT have this line, because the song hasn't been unshifted yet. 
+			// Actually should REALLY MOVE THE UNSHIFT EARLIER BECAUSE OF THAT. 
+			// Like in a breadth-first search, when you tmp=q.front();q.pop();
 		}
 		resource = createAudioResource(song, {inlineVolume: true});
 			// !!! 
@@ -229,9 +243,15 @@ function play_front() {
 			PLAYLIST.shift();
 		}
 	}
+	else
+		PLAYING = false; ///
 }
 
 client.login(token);
 
 // TODO: Add a function that deletes a song given an index.  (Not hard; have headache.) 
 // TODO: Add a function to delete the last song.  (What to name it?) 
+// TODO: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
+// TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
+// TODO: CTRL+F "REALLY MOVE". 
+// TODO: Add a function to insert a song at a given index. 

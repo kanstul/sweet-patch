@@ -26,19 +26,6 @@ const commands = [
 
 const rest = new REST({ version: '9' }).setToken(token);
 
-/*
-rest.get(Routes.applicationGuildCommands(clientId, guildId))
-	.then(data => {
-		const promises = [];
-		for (const command of data) {
-			const deleteUrl = `${Routes.applicationGuildCommands(clientId, guildId)}/${command.id}`;
-			promises.push(rest.delete(deleteUrl));
-		}
-		console.log('Deletion complete.');
-		return Promise.all(promises);
-	});
-*/
-
 rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
 	.then(() => console.log('Registration complete.'))
 	.catch(console.error);
