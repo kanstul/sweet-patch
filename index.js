@@ -48,6 +48,9 @@ function initialize_commands(initialize) {
 	return commands;
 }
 
+// Program starts here. 
+// ====================
+
 
 const { Client, Intents } = require('discord.js')
 const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
@@ -76,7 +79,7 @@ var PLAYLIST = [];
 var LOOP = false;
 var LOOP_FRONT = false;
 var VOLUME = 1.0;
-var AUTO_PLAY = true;
+var AUTO_PLAY = false;
 var CURRENTLY_PLAYING = "Nothing played yet.";
 var DAMP = 0.1;
 var HISTORY = [];
@@ -182,7 +185,7 @@ try {
 	}
 	if (commandName === 'join'){
 		var connection = getVoiceConnection(interaction.guildId)
-		if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) { // if (!connection). 
+		if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
 			connection = joinVoiceChannel({
 				channelId: interaction.member.voice.channelId,
 				guildId: interaction.guildId,
@@ -224,7 +227,8 @@ try {
 		return;
 	}
 	//awe
-	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'push'){
+	if (commandName === 'push'){
+		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
 		PLAYLIST.push(interaction.options.getString('song'));
 		await interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 		//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
@@ -232,18 +236,14 @@ try {
 			play_front();
 		return;
 	}
-	//else await interaction.reply("Couldn't add, playlist full.");
-
-	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'jump'){
+	if (commandName === 'jump') {
+		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
 		PLAYLIST.unshift(interaction.options.getString('song'));
 		await interaction.reply("Prepended "+PLAYLIST[0]+".");
-		//console.log("Prepended "+PLAYLIST[0]+".");
 		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 			play_front();
 		return;
 	}
-	//else await interaction.reply("Couldn't add, playlist full.");
-
 	if (commandName === 'damp'){
 		response = 'Volume was \`'+DAMP+'\`, is '
 		DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
@@ -286,23 +286,23 @@ try {
 		await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
 		return;
 	}
-	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'insert'    &&    (_index_ = interaction.options.getInteger('index') - 1) < PLAYLIST.length){ // The way I'm using _index_ here is unprofessional. 
-		PLAYLIST.splice(_index_,0,interaction.options.getString('song'));
-		await interaction.reply("Inserted "+PLAYLIST[_index_]+'.');
-// Left out on purpose. 
-//		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
-//			play_front();
-// Left out on purpose. 
+	if (commandName === 'insert'){
+		index = interaction.options.getInteger('index') - 1;
+		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
+		PLAYLIST.splice(index,0,interaction.options.getString('song'));
+		await interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
+//if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
+		// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
 		return;
 	}
-	//else await interaction.reply("Couldn't add, playlist full.");
-	if (commandName === 'strike' && (index = interaction.options.getInteger('index')-1) < PLAYLIST.length && index > 0){
+	if (commandName === 'strike') {
+		index = interaction.options.getInteger('index') - 1;
+		if (affirm(index < PLAYLIST.length && index >= 0),"Failed: index out of bounds.",interaction) return;
 		song_removed = PLAYLIST[index];
 		PLAYLIST.splice(index,1);
 		await interaction.reply("Removed "+song_removed+" from playlist.");
 		return;
 	}
-	//else await interaction.reply("Failed: index out of bounds.");
 
 	// if commandName === 'halt'  // Good name; for something. 
 	//Cmds // Navigational aid. 
@@ -365,9 +365,16 @@ function play_front() {
 		PLAYING = false; ///
 }
 
+// Should this be `async-await`ish? 
+function affirm(conditional, error_msg, interaction){ // Bullying the macroless language into having macros. 
+	if (!conditional)
+		interaction.reply(error_msg);
+	console.log("Affirm returning",conditional+'.');
+	return !conditional;
+}
+
 client.login(token);
 
-// TODO: Add a function that deletes a song given an index.  (Not hard; have headache.) 
 // TODO: Add a function to delete the last song.  (What to name it?) 
 // TODO: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
@@ -380,8 +387,12 @@ client.login(token);
 //TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
 //TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
 //TODO: Clean up the file directory. 
-//TODO: This is IMPORTANT, fix the `else await` thing.  Uncomment it, attempt to call `auto`, and watch what happens. 
+//TODO: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
+//TODO: CTRL+F "Find a better way to do this."
+//TODO: CTRL+F "Weird bug."
+//TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
 // DONE: Add a function to insert a song at a given index. 
+// DONE: Add a function that deletes a song given an index.  (Not hard; have headache.) 

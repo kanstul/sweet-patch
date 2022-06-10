@@ -27,6 +27,8 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('loop').setDescription('Continually plays the current song.'),
 		new SlashCommandBuilder().setName('keep').setDescription('Played songs are immediately appended to the end of the playlist.'),
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
+		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
+		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -74,7 +76,7 @@ var PLAYLIST = [];
 var LOOP = false;
 var LOOP_FRONT = false;
 var VOLUME = 1.0;
-var AUTO_PLAY = true;
+var AUTO_PLAY = false;
 var CURRENTLY_PLAYING = "Nothing played yet.";
 var DAMP = 0.1;
 var HISTORY = [];
@@ -82,14 +84,19 @@ var MAX_HISTORY_SIZE = 100;
 var MAX_PLAYLIST_SIZE = 50;
 	var PLAYING = false; // Find a better way to do this. 
 var COMMANDS = []; // This can REALLY be known at compile time. 
+var LOCK_TO_CHANNEL_ONCE_JOINED = false;
 // Variables and such. 
+// Maybe these should all be `const`s locked to the `config.json`?  //syzygy
 
 client.once('ready', ()=> {
 	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
+	//console.log(COMMANDS);
+	/*
 	for (const command of COMMANDS) { // Why did `Java`Script use `const` rather than `final`?  So weird. 
 		console.log(command.name);
 		console.log(command.description);
 	}
+	*/
 	//global.kick(); // Have to use global rather than window rather than eval. 
 	console.log('Ready!');
 	   player.play(resource); // <==
@@ -134,7 +141,9 @@ async function list(response,list_given) {
 	return response;
 }
 
+//cmds // Navigational aid. 
 client.on('interactionCreate', async interaction => {
+try {
 	if (!interaction.isCommand()) return; // Watch out. 
 	// Is this deprecated? 
 
@@ -145,30 +154,35 @@ client.on('interactionCreate', async interaction => {
 		await list(response,PLAYLIST);
 
 		if (response.length === 0)
-			interaction.reply("Playlist empty.");
+			await interaction.reply("Playlist empty.");
 		else
-			interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+			await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+		return;
 	}
-	else if (commandName === 'kick') {
+	if (commandName === 'kick') {
 		kick();
-		interaction.reply('\`*Rattle*\`');
+		await interaction.reply('\`*Rattle*\`');
+		return;
 	}
-	else if (commandName === 'skip') {
+	if (commandName === 'skip') {
 		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and AUTO_PLAY. 
 		player.stop();
-		interaction.reply('Skipping.');
+		await interaction.reply('Skipping.');
+		return;
 	}
-	else if (commandName === 'stop') {
+	if (commandName === 'stop') {
 		player.pause();
-		interaction.reply('Paused.');
+		await interaction.reply('Paused.');
+		return;
 	}
-	else if (commandName === 'play') {
+	if (commandName === 'play') {
 		player.unpause(); // Use && and fit into a single line instead? 
-		interaction.reply('Resumed.'); 
+		await interaction.reply('Resumed.'); 
+		return;
 	}
-	else if (commandName === 'join'){
+	if (commandName === 'join'){
 		var connection = getVoiceConnection(interaction.guildId)
-		if (true) { // if (!connection). 
+		if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) { // if (!connection). 
 			connection = joinVoiceChannel({
 				channelId: interaction.member.voice.channelId,
 				guildId: interaction.guildId,
@@ -196,78 +210,113 @@ client.on('interactionCreate', async interaction => {
 		} catch(error) {
 			console.warn(error); // Look into console.warn as compared to console.error. 
 		}
+		return;
 	}
-	else if (commandName === 'what'){
-		interaction.reply(CURRENTLY_PLAYING);
+	if (commandName === 'what'){
+		await interaction.reply(CURRENTLY_PLAYING);
+		return;
 	}
-	else if (commandName === 'set'){
+	if (commandName === 'set'){
 		response = 'Volume was \`'+VOLUME+'\`, is '
 		VOLUME = interaction.options.getNumber('level') / 10.0;
 		response = response.concat('now \`'+VOLUME+'\`.');
-		interaction.reply(response);
+		await interaction.reply(response);
+		return;
 	}
-	else if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'push'){
+	//awe
+	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'push'){
 		PLAYLIST.push(interaction.options.getString('song'));
-		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) {
-			interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
-			console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
+		await interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
+		//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
+		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 			play_front();
-		}
-		else
-			interaction.reply("Couldn't add, playlist full.");
+		return;
 	}
-	else if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'jump'){
+	//else await interaction.reply("Couldn't add, playlist full.");
+
+	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'jump'){
 		PLAYLIST.unshift(interaction.options.getString('song'));
-		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) {
-			interaction.reply("Prepended "+PLAYLIST[0]+".");
-			console.log("Prepended "+PLAYLIST[0]+".");
+		await interaction.reply("Prepended "+PLAYLIST[0]+".");
+		//console.log("Prepended "+PLAYLIST[0]+".");
+		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 			play_front();
-		}
-		else
-			interaction.reply("Couldn't add, playlist full.");
+		return;
 	}
-	else if (commandName === 'damp'){
+	//else await interaction.reply("Couldn't add, playlist full.");
+
+	if (commandName === 'damp'){
 		response = 'Volume was \`'+DAMP+'\`, is '
 		DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
 		// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
 		response = response.concat('now \`'+DAMP+'\`.');
-		interaction.reply(response);
+		await interaction.reply(response);
 	}
-	else if (commandName === 'history'){
+	if (commandName === 'history'){
 		response = [];
 		await list(response,HISTORY);
 		if (response.length === 0)
-			interaction.reply("No songs have been played.");
+			await interaction.reply("No songs have been played.");
 		else
-			interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+			await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+		return;
 	}
-	else if (commandName === 'auto'){
+	if (commandName === 'auto'){
 		AUTO_PLAY = !AUTO_PLAY;
-		interaction.reply("Auto play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
+		await interaction.reply("Auto play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
+		return;
 	}
-	else if (commandName == 'next'){ 
+	if (commandName == 'next'){ 
 		play_front(); // Maybe I should just fold this into `skip`? 
+		return;
 	}
-	else if (commandName === 'loop'){
+	if (commandName === 'loop'){
 		LOOP = !LOOP;
-		interaction.reply("Will "+(LOOP?"now":"not")+" loop playlist.");
+		await interaction.reply("Will "+(LOOP?"now":"not")+" loop playlist.");
+		return;
 	}
-	else if (commandName === 'keep'){
+	if (commandName === 'keep'){
 		LOOP_FRONT = !LOOP_FRONT;
-		interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
+		await interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
+		return;
 	}
-	// else if commandName === 'halt'  // Good name; for something. 
-	else if (commandName === 'help'){
+	if (commandName === 'help'){
 		response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
 		for (const command of COMMANDS)
 			response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
-		interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+		await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+		return;
+	}
+	if (commandName === 'insert'){
+		index = interaction.options.getInteger('index') - 1;
+		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
+		PLAYLIST.splice(index,0,interaction.options.getString('song'));
+		await interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
+//if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
+		return;
+	}
+	if (commandName === 'strike') {
+		index = interaction.options.getInteger('index') - 1;
+		//if (affirm(index < PLAYLIST.length && index >= 0)) return;
+		if (index < PLAYLIST.length && index > 0){
+			song_removed = PLAYLIST[index];
+			PLAYLIST.splice(index,1);
+			await interaction.reply("Removed "+song_removed+" from playlist.");
+			return;
+		}
+		else await interaction.reply("Failed: index out of bounds.");
+	}
+
+	// if commandName === 'halt'  // Good name; for something. 
+	//Cmds // Navigational aid. 
+} catch (e) {
+	console.error(e);
+	console.error("Error in command function.");
 	}
 });
 
 function capitalize(string){
 	if (typeof string != 'string' || string.length < 1) {
-		console.log("Error in `capitalize()`.")
+		console.error("Error in `capitalize()`.")
 		return string;
 	}
 	return string.charAt(0).toUpperCase().concat(string.slice(1));
@@ -283,7 +332,7 @@ function capitalize(string){
 
 function play_front() {
 	console.log('Play_front()');
-	if (PLAYLIST.length > 0){
+	if (AUTO_PLAY && PLAYLIST.length > 0){
 		PLAYING = true;
 		if (LOOP) // Could move this to the end and switch for CURRENTLY_PLAYING, might be better since it'll push out any invalid songs that way. 
 			PLAYLIST.push(PLAYLIST[0]); // Not particularly significant either way. 
@@ -318,6 +367,14 @@ function play_front() {
 		PLAYING = false; ///
 }
 
+// Should this be `async-await`ish? 
+function affirm(conditional, error_msg, interaction){ // Bullying the macroless language into having macros. 
+	if (!conditional)
+		interaction.reply(error_msg);
+	console.log("Affirm returning",conditional+'.');
+	return !conditional;
+}
+
 client.login(token);
 
 // TODO: Add a function that deletes a song given an index.  (Not hard; have headache.) 
@@ -325,6 +382,16 @@ client.login(token);
 // TODO: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "REALLY MOVE". 
-// TODO: Add a function to insert a song at a given index. 
 // TODO: Re-order the list that the commands go in. 
+//
+// TODO: CTRL+F "syzygy" !!!!
+//
+//TODO: CTRL+F "//!" 
+//TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
+//TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
+//TODO: Clean up the file directory. 
+//TODO: This is IMPORTANT, fix the `else await` thing.  Uncomment it, attempt to call `auto`, and watch what happens. 
+
+//DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
+// DONE: Add a function to insert a song at a given index. 
