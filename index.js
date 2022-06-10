@@ -28,6 +28,7 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('keep').setDescription('Played songs are immediately appended to the end of the playlist.'),
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
 		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
+		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -142,6 +143,7 @@ async function list(response,list_given) {
 
 //cmds // Navigational aid. 
 client.on('interactionCreate', async interaction => {
+try {
 	if (!interaction.isCommand()) return; // Watch out. 
 	// Is this deprecated? 
 
@@ -230,7 +232,7 @@ client.on('interactionCreate', async interaction => {
 			play_front();
 		return;
 	}
-	else await interaction.reply("Couldn't add, playlist full.");
+	//else await interaction.reply("Couldn't add, playlist full.");
 
 	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'jump'){
 		PLAYLIST.unshift(interaction.options.getString('song'));
@@ -240,7 +242,7 @@ client.on('interactionCreate', async interaction => {
 			play_front();
 		return;
 	}
-	else await interaction.reply("Couldn't add, playlist full.");
+	//else await interaction.reply("Couldn't add, playlist full.");
 
 	if (commandName === 'damp'){
 		response = 'Volume was \`'+DAMP+'\`, is '
@@ -293,11 +295,22 @@ client.on('interactionCreate', async interaction => {
 // Left out on purpose. 
 		return;
 	}
-	else await interaction.reply("Couldn't add, playlist full.");
+	//else await interaction.reply("Couldn't add, playlist full.");
+	if (commandName === 'strike' && (index = interaction.options.getInteger('index')-1) < PLAYLIST.length && index > 0){
+		song_removed = PLAYLIST[index];
+		PLAYLIST.splice(index,1);
+		await interaction.reply("Removed "+song_removed+" from playlist.");
+		return;
+	}
+	//else await interaction.reply("Failed: index out of bounds.");
 
 	// if commandName === 'halt'  // Good name; for something. 
+	//Cmds // Navigational aid. 
+} catch (e) {
+	console.error(e);
+	console.error("Error in command function.");
+	}
 });
-//Cmds // Navigational aid. 
 
 function capitalize(string){
 	if (typeof string != 'string' || string.length < 1) {
@@ -359,7 +372,6 @@ client.login(token);
 // TODO: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "REALLY MOVE". 
-// TODO: Add a function to insert a song at a given index. 
 // TODO: Re-order the list that the commands go in. 
 //
 // TODO: CTRL+F "syzygy" !!!!
@@ -368,6 +380,8 @@ client.login(token);
 //TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
 //TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
 //TODO: Clean up the file directory. 
+//TODO: This is IMPORTANT, fix the `else await` thing.  Uncomment it, attempt to call `auto`, and watch what happens. 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
+// DONE: Add a function to insert a song at a given index. 
