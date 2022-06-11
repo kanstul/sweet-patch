@@ -119,6 +119,8 @@ function hello(){
 }
 
 client.once('ready', ()=> {
+	console.log(remove_non_URL_characters("https://www.youtube.com/watch?v=A6xmmMuNUUs&list=RDMM&start_radio=1, -%$!@#A https://www.youtube.com/watch?v=A6xmmMuNUUs&list=RDMM&start_radio=1"));
+	//let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
 	//everything["testfunction"]();
 	console.log(global.hello);
 	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
@@ -274,7 +276,9 @@ try {
 	}
 	if (commandName === 'push'){
 		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-		PLAYLIST.push(interaction.options.getString('song'));
+		songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+		for (song of songs)
+			PLAYLIST.push(song);
 		await interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 		//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
 		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
@@ -283,7 +287,9 @@ try {
 	}
 	if (commandName === 'jump') {
 		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-		PLAYLIST.unshift(interaction.options.getString('song'));
+		songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+		for (let i=songs.length-1;i>=0;--i)
+			PLAYLIST.unshift(songs[i]);
 		await interaction.reply("Prepended "+PLAYLIST[0]+".");
 		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 			play_front();
@@ -336,7 +342,9 @@ try {
 	if (commandName === 'insert'){
 		index = interaction.options.getInteger('index') - 1;
 		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
-		PLAYLIST.splice(index,0,interaction.options.getString('song'));
+		//PLAYLIST.splice(index,0,interaction.options.getString('song'));
+		songs = remove_non_URL_characters(interaction.options.getString('song')).split(' ');
+		PLAYLIST.splice(index,0,...songs);
 		await interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
 //if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
 		// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
@@ -427,6 +435,20 @@ function affirm(conditional, error_msg, interaction){ // Bullying the macroless 
 	return !conditional;
 }
 
+function remove_non_URL_characters(string){
+	let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+;="; // , // Comma is deliberately excluded; is that prudent? 
+	original_string = string;
+	fnl = "";
+	for (c of legal_characters)
+		string = string.replaceAll(c,' ');
+	for (let i=0;i<original_string.length;++i)
+		fnl = fnl.concat(string.charAt(i) == ' '? original_string.charAt(i) : ' ');
+	//console.log("Original string is  "+original_string);
+	//console.log("String is           "+string);
+	//console.log("Sanitized string is "+fnl);
+	return fnl;
+}
+
 client.login(token);
 
 // TODO: Add a function to delete the last song.  (What to name it?) 
@@ -450,6 +472,8 @@ client.login(token);
 //TODO: Play from timestamp! 
 //TODO: Add multiple songs with a single command. 
 //TODO: Have `interaction.reply` by voice. 
+//TODO: Make `remove_non_URL_characters` better. 
+//TODO: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
