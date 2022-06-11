@@ -119,23 +119,27 @@ cmd.set = function(interaction) {
 	return;
 }
 cmd.push = function(interaction) {
+	let previous_playlist_length = PLAYLIST.length;
+
 	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
 	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
 	for (song of songs)
 		PLAYLIST.push(song);
 	respond(interaction,"Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 	//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
-	if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
+	if (!PLAYING && AUTO_PLAY && previous_playlist_length === 0) 
 		play_front();
 	return;
 }
 cmd.jump = function(interaction) {
+	let previous_playlist_length = PLAYLIST.length;
+
 	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
 	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
 	for (let i=songs.length-1;i>=0;--i)
 		PLAYLIST.unshift(songs[i]);
 	respond(interaction,"Prepended "+PLAYLIST[0]+".");
-	if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
+	if (!PLAYING && AUTO_PLAY && previous_playlist_length === 0)
 		play_front();
 	return;
 }
@@ -323,7 +327,7 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('keep').setDescription('Continually plays the current song.'),
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
 		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
-		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
+		new SlashCommandBuilder().setName('strike').setDescription('Removes song at index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
 		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
 		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
 		// Use commas. 
@@ -384,8 +388,6 @@ function play_front() {
 	console.log('Play_front()');
 	if (PLAYLIST.length > 0){
 		PLAYING = true;
-		if (LOOP) // Could move this to the end and switch for CURRENTLY_PLAYING, might be better since it'll push out any invalid songs that way. 
-			PLAYLIST.push(PLAYLIST[0]); // Not particularly significant either way. 
 		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
 		song = null;
 		try {
@@ -400,18 +402,27 @@ function play_front() {
 			// Actually should REALLY MOVE THE UNSHIFT EARLIER BECAUSE OF THAT. 
 			// Like in a breadth-first search, when you tmp=q.front();q.pop();
 		}
+		finally {
+			console.log('Finally!');
+			PLAYLIST.shift(); // <<===
+		}
 		resource = createAudioResource(song, {inlineVolume: true});
+
 			// !!! 
 			CURRENTLY_PLAYING = PLAYLIST[0]; // WATCH OUT: VARIABLE'S GLOBAL.  
 			// SHOULD BE FINE SINCE IN ORDER TO GET HERE, MUST BE A YOUTUBE VIDEO. 
+
+		HISTORY.unshift(CURRENTLY_PLAYING);
+		if (HISTORY.length > MAX_HISTORY_SIZE)
+			HISTORY.pop();
+
 		console.log("We just created an audio resource of "+song+".");
 		player.play(resource);
-		if (!LOOP_FRONT) {
-			HISTORY.unshift(PLAYLIST[0]); // Use CURRENTLY_PLAYING instead? 
-			if (HISTORY.length > MAX_HISTORY_SIZE)
-				HISTORY.pop();
-			PLAYLIST.shift();
-		}
+
+		if (LOOP) // Could move this to the end and switch for CURRENTLY_PLAYING, might be better since it'll push out any invalid songs that way. 
+			PLAYLIST.push(CURRENTLY_PLAYING); // Not particularly significant either way. 
+		if (LOOP_FRONT)
+			PLAYLIST.unshift(CURRENTLY_PLAYING);
 	}
 	else
 		PLAYING = false; ///
@@ -476,6 +487,7 @@ client.login(token);
 // TEST: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
 // TEST: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
 // TEST: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
+// TEST: Functions `loop` and `keep`! 
 
 //DONE: 
 // DONE: Add a function to insert a song at a given index. 
