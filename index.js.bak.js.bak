@@ -412,8 +412,12 @@ async function play_front() {
 		PLAYING = true;
 		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
 		let song = null;
+		let stream = null;
 		try {
-			song = await new_service.stream(PLAYLIST[0], {seek: HEY_FIX_ME});
+			song = ytdl(PLAYLIST[0]);
+			//song = await(play.stream(PLAYLIST[0]));
+			stream = await new_service.stream(PLAYLIST[0]);
+
 			CURRENTLY_PLAYING = PLAYLIST[0];
 			// Should be safe to assign a global string like this since CURRENTLY_PLAYING must be a YouTube video. 
 		}
@@ -430,7 +434,11 @@ async function play_front() {
 			console.log('Finally!');
 			PLAYLIST.shift(); // <<===
 		}
-		resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
+		console.log("Stream is.");
+		console.log(stream);
+		//resource = createAudioResource(song, {inlineVolume: true});
+		resource = createAudioResource(stream.stream, {inputType : stream.type, inlineVolume: true});
+		//resource = createAudioResource(song.song, {inputType: song.type});
 
 		HISTORY.unshift(CURRENTLY_PLAYING);
 		if (HISTORY.length > MAX_HISTORY_SIZE)
@@ -446,7 +454,6 @@ async function play_front() {
 	}
 	else
 		PLAYING = false; ///
-	//return CURRENTLY_PLAYING;
 }
 
 // Should this be `async-await`ish? 
@@ -484,9 +491,6 @@ function respond(interaction,msg) {
 
 client.login(token);
 
-// TODO: CTRL+F "HEY_FIX_ME".
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: Fix the critical v14 bug! 
 // TODO: Play from timestamp! 
