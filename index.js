@@ -1,4 +1,22 @@
-//
+const { Client, Intents } = require('discord.js')
+const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+//const { token } = require('./config.json');
+const ytdl = require("ytdl-core");
+
+
+const player = createAudioPlayer();
+const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
+let resource = createAudioResource(test, {inlineVolume: true});
+
+
+const client = new Client({ 
+	intents: [
+		Intents.FLAGS.GUILDS,
+		Intents.FLAGS.GUILD_MEMBERS,
+		Intents.FLAGS.GUILD_VOICE_STATES,
+	],
+});
+
 // Variables and such. 
 const { token } = require('./config.json');
 var TALKING = new Set(); 
@@ -9,6 +27,7 @@ var COMMANDS = []; // This can REALLY be known at compile time.
 var CURRENTLY_PLAYING = "Nothing played yet.";
 var connection = null;
 
+// Variables and such. 
 let { // `yawny`. 
 	LOOP = false,
 	LOOP_FRONT = false, 
@@ -31,22 +50,21 @@ const {
 	ABSOLUTE_MAX_PLAYLIST_SIZE = 255
 } = require('./config.json');
 // Variables and such. 
-//const {token,LOOP,LOOP_FRONT,VOLUME,DAMP,MAX_HISTORY_SIZE,MAX_PLAYLIST_SIZE,LOCK_TO_CHANNEL_ONCE_JOINED} = require('./config.json');
 
 cmd = new Object;
 
+const DiscordTTS = require("discord-tts");
+cmd.test = function(interaction) {
+	const stream = DiscordTTS.getVoiceSTream("Hello, text to speech world!");
+	const audioResource = createAudioResource(stream, {inlineVolume: true});
+	player.play(audioResource);
+}
 cmd.list = async function(interaction) {
 	console.log(PLAYLIST);
 	response = [];
 	await list(response,PLAYLIST);
 	//response = list([],PLAYLIST); // But why not? 
 
-	/*
-	if (response.length === 0) 
-		return "Playlist empty.";
-	else
-		return '\`\`\`'+response.join('\n')+'\`\`\`';
-	*/
 	return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
 }
 cmd.kick = function(interaction) {
@@ -157,13 +175,7 @@ cmd.damp = function(interaction) {
 cmd.history = function(interaction) {
 	response = [];
 	list(response,HISTORY);
-	//response = list([],HISTORY); // Seriously, why? 
-	/*
-	if (response.length === 0)
-		return "No songs have been played.";
-	else
-		return '\`\`\`'+response.join('\n')+'\`\`\`';
-	*/
+	//response = list([],HISTORY); // Seriously, why?  // Fixthis.
 	return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "No songs have been played.";
 }
 cmd.auto = function(interaction) {
@@ -235,25 +247,6 @@ cmd.play = function(interaction) {
 
 // Program starts here. 
 // ====================
-
-const { Client, Intents } = require('discord.js')
-const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-//const { token } = require('./config.json');
-const ytdl = require("ytdl-core");
-
-
-const player = createAudioPlayer();
-const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
-let resource = createAudioResource(test, {inlineVolume: true});
-
-
-const client = new Client({ 
-	intents: [
-		Intents.FLAGS.GUILDS,
-		Intents.FLAGS.GUILD_MEMBERS,
-		Intents.FLAGS.GUILD_VOICE_STATES,
-	],
-});
 
 client.once('ready', ()=> {
 	let argv = process.argv; // Should this be global? 
@@ -354,6 +347,7 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
 		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
 		new SlashCommandBuilder().setName('play').setDescription('\n==> Immediately joins the channel you\'re in and plays the given song.').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
+		new SlashCommandBuilder().setname('test').setDescription('A test function, it should only be used by the developer.  Remember to remove me from production code.'),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -508,6 +502,7 @@ client.login(token);
 // TODO: CTRL+F "Some other time."
 // TODO: CTRL+F "Fix later." 
 // TODO: Add a function to remove videos by URL/title/whatever. 
+// TODO: CTRL+F "Fixthis."
 
 //TEST: 
 // TEST: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
