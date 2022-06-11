@@ -24,8 +24,9 @@ let { // `yawny`.
 cmd = new Object;
 
 cmd.list = async function(interaction) {
+	//console.log(PLAYLIST);
 	response = [];
-	list(response,PLAYLIST);
+	await list(response,PLAYLIST);
 	//response = list([],PLAYLIST); // But why not? 
 
 	if (response.length === 0)
@@ -440,6 +441,7 @@ client.login(token);
 //TODO: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
 //TODO: CTRL+F "TAGYOUIT."
 //TODO: Consider what global variables should be `const` and assign them appropriately. 
+//TODO: Fix that damnable `async` nonsense that's going on in the `cmd.list` function! 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
