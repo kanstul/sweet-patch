@@ -29,7 +29,6 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
 		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
 		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
-		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -102,8 +101,7 @@ let { // `yawny`.
 	DAMP = 0.1,
 	MAX_HISTORY_SIZE = 100,
 	MAX_PLAYLIST_SIZE = 50,
-	LOCK_TO_CHANNEL_ONCE_JOINED = false,
-	FADE_TIME = 5000
+	LOCK_TO_CHANNEL_ONCE_JOINED = false
 } = require('./config.json');
 
 // Variables and such. 
@@ -134,28 +132,23 @@ client.once('ready', ()=> {
 	console.log('Ready!');
 	   //player.play(resource); // <==
 	play_front();
-	let fade_time = FADE_TIME;
+	let counter = 5000;
 	setInterval( () => { // <== "While true, check every millisecond." 
 		if (TALKING.size > 0) { // If people are talking. 
 			resource.volume.setVolume(DAMP*VOLUME); // Set the volume to DAMP * VOLUME. 
-			fade_time = FADE_TIME;
+			counter = 100;
+			console.log("Counter reset.");
 		}
 		else { // If people AREN'T talking. 
-			//console.log(fade_time);
-			if (fade_time > 1)
-				--fade_time; 
-
-			// FADE_TIME AS A PERCENTAGE. 
-			//if (fade_time < (2/3)*FADE_TIME) 
-			let percentage = Math.min(((FADE_TIME - fade_time) / FADE_TIME) + DAMP, 1);
-			resource.volume.setVolume(percentage * VOLUME);
+			//if (--counter < 0)
+			console.log(counter);
+			if (counter > -10)
+				counter -= 1;
+			if (counter < 0)
+				resource.volume.setVolume(VOLUME);  // Set the volume to VOLUME. 
 		}
 	},1);
 });
-
-function sigmoid (input) {
-	1 / (1 + 2.7182)
-}
 
 /*
 client.once('ready',setInterval(()=>{
@@ -290,7 +283,7 @@ try {
 		return;
 	}
 	if (commandName === 'damp'){
-		response = 'Damp was \`'+DAMP+'\`, is '
+		response = 'Volume was \`'+DAMP+'\`, is '
 		DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
 		// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
 		response = response.concat('now \`'+DAMP+'\`.');
@@ -349,13 +342,6 @@ try {
 		PLAYLIST.splice(index,1);
 		await interaction.reply("Removed "+song_removed+" from playlist.");
 		return;
-	}
-	if (commandName === 'fade') {
-		response = 'Fade was \`'+FADE_TIME+'\`, is '
-		FADE_TIME = interaction.options.getInteger('fade');
-		response = response.concat('now \`'+FADE_TIME+'\`.');
-		console.log(response);
-		await interaction.reply(response);
 	}
 
 	// if commandName === 'halt'  // Good name; for something. 
@@ -448,8 +434,6 @@ client.login(token);
 //TODO: CTRL+F "But why not?"
 //TODO: Implement `abscond`. 
 //TODO: Play from timestamp! 
-//TODO: Add multiple songs with a single command. 
-//TODO: Have `interaction.reply` by voice. 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 

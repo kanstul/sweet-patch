@@ -48,15 +48,17 @@ function initialize_commands(initialize) {
 	return commands;
 }
 
+// Program starts here. 
+// ====================
 
 const { Client, Intents } = require('discord.js')
 const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-const { token } = require('./config.json');
+//const { token } = require('./config.json');
 const ytdl = require("ytdl-core");
 
 
 const player = createAudioPlayer();
-const test = './second-of-silence.mp3';
+const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
 let resource = createAudioResource(test, {inlineVolume: true});
 
 //const name = "Muze, ";
@@ -71,25 +73,54 @@ const client = new Client({
 });
 
 // Variables and such. 
+const { token } = require('./config.json');
 var TALKING = new Set(); 
 var PLAYLIST = [];
-var LOOP = false;
-var LOOP_FRONT = false;
-var VOLUME = 1.0;
-var AUTO_PLAY = false;
-var CURRENTLY_PLAYING = "Nothing played yet.";
-var DAMP = 0.1;
 var HISTORY = [];
-var MAX_HISTORY_SIZE = 100;
-var MAX_PLAYLIST_SIZE = 50;
 	var PLAYING = false; // Find a better way to do this. 
 var COMMANDS = []; // This can REALLY be known at compile time. 
-var LOCK_TO_CHANNEL_ONCE_JOINED = false;
+var CURRENTLY_PLAYING = "Nothing played yet.";
+
+
+/*
+const LOOP = CONFIG.LOOP != undefined? CONFIG.LOOP : false;
+const LOOP_FRONT = CONFIG.LOOP_FRONT != undefined? CONFIG.LOOP_FRONT : false;
+const VOLUME = CONFIG.VOLUME != undefined? CONFIG.VOLUME : 1.0;
+const AUTO_PLAY = CONFIG.AUTO_PLAY != undefined? CONFIG.AUTO_PLAY : true;
+const DAMP = CONFIG.DAMP != undefined? CONFIG.DAMP : 0.1;
+const MAX_HISTORY_SIZE = CONFIG.MAX_HISTORY_SIZE != undefined? CONFIG.MAX_HISTORY_SIZE : 100;
+const MAX_PLAYLIST_SIZE = CONFIG.MAX_PLAYLIST_SIZE != undefined? CONFIG.MAX_PLAYLIST_SIZE : 50;
+const LOCK_TO_CHANNEL_ONCE_JOINED = CONFIG.LOCK_TO_CHANNEL_ONCE_JOINED != undefined? CONFIG.LOCK_TO_CHANNEL_ONCE_JOINED : false;
+*/
+
+let { // `yawny`. 
+	LOOP = false,
+	LOOP_FRONT = false, 
+	VOLUME = 1.0,
+	AUTO_PLAY = true,
+	DAMP = 0.1,
+	MAX_HISTORY_SIZE = 100,
+	MAX_PLAYLIST_SIZE = 50,
+	LOCK_TO_CHANNEL_ONCE_JOINED = false
+} = require('./config.json');
+
 // Variables and such. 
 // Maybe these should all be `const`s locked to the `config.json`?  //syzygy
+//const {token,LOOP,LOOP_FRONT,VOLUME,DAMP,MAX_HISTORY_SIZE,MAX_PLAYLIST_SIZE,LOCK_TO_CHANNEL_ONCE_JOINED} = require('./config.json');
+
+function execute(fn){
+	fn();
+}
+
+function hello(){
+	console.log("Hello, world!");
+}
 
 client.once('ready', ()=> {
+	//everything["testfunction"]();
+	console.log(global.hello);
 	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
+	console.log(LOOP);
 	//console.log(COMMANDS);
 	/*
 	for (const command of COMMANDS) { // Why did `Java`Script use `const` rather than `final`?  So weird. 
@@ -99,7 +130,8 @@ client.once('ready', ()=> {
 	*/
 	//global.kick(); // Have to use global rather than window rather than eval. 
 	console.log('Ready!');
-	   player.play(resource); // <==
+	   //player.play(resource); // <==
+	play_front();
 	setInterval( () => {
 		if (TALKING.size > 0) {
 			resource.volume.setVolume(DAMP*VOLUME);
@@ -122,11 +154,12 @@ client.once('ready',setInterval(()=>{
 function kick() {
 	resource = createAudioResource(test, {inlineVolume: true});
 	player.play(resource);
-} // Don't think that we still need this.  At least map it to a brief YouTube video instead. 
+} // Don't think that we still need this. 
 
 async function list(response,list_given) {
-	for (i=0;i<list_given.length;++i)
+	for (let i=0;i<list_given.length;++i)
 	{
+		//console.error("In list,",i);
 		song = list_given[i];
 		try {
 			info = await ytdl.getInfo(song);
@@ -152,6 +185,7 @@ try {
 	if (commandName === 'list') {
 		response = [];
 		await list(response,PLAYLIST);
+		//await response = list([],PLAYLIST); // But why not? 
 
 		if (response.length === 0)
 			await interaction.reply("Playlist empty.");
@@ -182,7 +216,7 @@ try {
 	}
 	if (commandName === 'join'){
 		var connection = getVoiceConnection(interaction.guildId)
-		if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) { // if (!connection). 
+		if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
 			connection = joinVoiceChannel({
 				channelId: interaction.member.voice.channelId,
 				guildId: interaction.guildId,
@@ -223,8 +257,8 @@ try {
 		await interaction.reply(response);
 		return;
 	}
-	//awe
-	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'push'){
+	if (commandName === 'push'){
+		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
 		PLAYLIST.push(interaction.options.getString('song'));
 		await interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 		//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
@@ -232,18 +266,14 @@ try {
 			play_front();
 		return;
 	}
-	//else await interaction.reply("Couldn't add, playlist full.");
-
-	if (PLAYLIST.length <= MAX_PLAYLIST_SIZE && commandName === 'jump'){
+	if (commandName === 'jump') {
+		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
 		PLAYLIST.unshift(interaction.options.getString('song'));
 		await interaction.reply("Prepended "+PLAYLIST[0]+".");
-		//console.log("Prepended "+PLAYLIST[0]+".");
 		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 			play_front();
 		return;
 	}
-	//else await interaction.reply("Couldn't add, playlist full.");
-
 	if (commandName === 'damp'){
 		response = 'Volume was \`'+DAMP+'\`, is '
 		DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
@@ -254,6 +284,7 @@ try {
 	if (commandName === 'history'){
 		response = [];
 		await list(response,HISTORY);
+		//await response = list([],HISTORY);
 		if (response.length === 0)
 			await interaction.reply("No songs have been played.");
 		else
@@ -262,11 +293,12 @@ try {
 	}
 	if (commandName === 'auto'){
 		AUTO_PLAY = !AUTO_PLAY;
-		await interaction.reply("Auto play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
+		await interaction.reply("Auto-play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
 		return;
 	}
 	if (commandName == 'next'){ 
 		play_front(); // Maybe I should just fold this into `skip`? 
+		await interaction.reply("Forcibly playing "+CURRENTLY_PLAYING+'.');
 		return;
 	}
 	if (commandName === 'loop'){
@@ -292,18 +324,16 @@ try {
 		PLAYLIST.splice(index,0,interaction.options.getString('song'));
 		await interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
 //if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
+		// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
 		return;
 	}
 	if (commandName === 'strike') {
 		index = interaction.options.getInteger('index') - 1;
-		//if (affirm(index < PLAYLIST.length && index >= 0)) return;
-		if (index < PLAYLIST.length && index > 0){
-			song_removed = PLAYLIST[index];
-			PLAYLIST.splice(index,1);
-			await interaction.reply("Removed "+song_removed+" from playlist.");
-			return;
-		}
-		else await interaction.reply("Failed: index out of bounds.");
+		if (affirm(index < PLAYLIST.length && index >= 0),"Failed: index out of bounds.",interaction) return;
+		song_removed = PLAYLIST[index];
+		PLAYLIST.splice(index,1);
+		await interaction.reply("Removed "+song_removed+" from playlist.");
+		return;
 	}
 
 	// if commandName === 'halt'  // Good name; for something. 
@@ -332,7 +362,7 @@ function capitalize(string){
 
 function play_front() {
 	console.log('Play_front()');
-	if (AUTO_PLAY && PLAYLIST.length > 0){
+	if (PLAYLIST.length > 0){
 		PLAYING = true;
 		if (LOOP) // Could move this to the end and switch for CURRENTLY_PLAYING, might be better since it'll push out any invalid songs that way. 
 			PLAYLIST.push(PLAYLIST[0]); // Not particularly significant either way. 
@@ -377,7 +407,6 @@ function affirm(conditional, error_msg, interaction){ // Bullying the macroless 
 
 client.login(token);
 
-// TODO: Add a function that deletes a song given an index.  (Not hard; have headache.) 
 // TODO: Add a function to delete the last song.  (What to name it?) 
 // TODO: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
@@ -390,8 +419,15 @@ client.login(token);
 //TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
 //TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
 //TODO: Clean up the file directory. 
-//TODO: This is IMPORTANT, fix the `else await` thing.  Uncomment it, attempt to call `auto`, and watch what happens. 
+//TODO: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
+//TODO: CTRL+F "Find a better way to do this."
+//TODO: CTRL+F "Weird bug."
+//TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
+//TODO: CTRL+F "But why not?"
+//TODO: Implement `abscond`. 
+//TODO: Play from timestamp! 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
 // DONE: Add a function to insert a song at a given index. 
+// DONE: Add a function that deletes a song given an index.  (Not hard; have headache.) 
