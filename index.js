@@ -1,3 +1,269 @@
+// Variables and such. 
+const { token } = require('./config.json');
+var TALKING = new Set(); 
+var PLAYLIST = [];
+var HISTORY = [];
+	var PLAYING = false; // Find a better way to do this. 
+var COMMANDS = []; // This can REALLY be known at compile time. 
+var CURRENTLY_PLAYING = "Nothing played yet.";
+
+let { // `yawny`. 
+	LOOP = false,
+	LOOP_FRONT = false, 
+	VOLUME = 1.0,
+	AUTO_PLAY = true,
+	DAMP = 0.1,
+	MAX_HISTORY_SIZE = 100,
+	MAX_PLAYLIST_SIZE = 50,
+	LOCK_TO_CHANNEL_ONCE_JOINED = false,
+	FADE_TIME = 5000
+} = require('./config.json');
+// Variables and such. 
+//const {token,LOOP,LOOP_FRONT,VOLUME,DAMP,MAX_HISTORY_SIZE,MAX_PLAYLIST_SIZE,LOCK_TO_CHANNEL_ONCE_JOINED} = require('./config.json');
+
+cmd = new Object;
+
+cmd.list = async function(interaction) {
+	response = [];
+	list(response,PLAYLIST);
+	//response = list([],PLAYLIST); // But why not? 
+
+	if (response.length === 0)
+		interaction.reply("Playlist empty.");
+	else
+		interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+	return;
+}
+cmd.kick = function(interaction) {
+	kick();
+	interaction.reply('\`*Rattle*\`');
+	return;
+}
+cmd.skip = function(interaction) {
+	// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and AUTO_PLAY. 
+	player.stop();
+	interaction.reply('Skipping.');
+	return;
+}
+cmd.stop = function(interaction) {
+	player.pause();
+	interaction.reply('Paused.');
+	return;
+}
+cmd.play = function(interaction) {
+	player.unpause(); // Use && and fit into a single line instead? 
+	interaction.reply('Resumed.'); 
+	return;
+}
+cmd.join = async function(interaction) {
+	var connection = getVoiceConnection(interaction.guildId)
+	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
+		connection = joinVoiceChannel({
+			channelId: interaction.member.voice.channelId,
+			guildId: interaction.guildId,
+			adapterCreator: interaction.guild.voiceAdapterCreator,
+			selfDeaf: false,
+			selfMute: false,
+		});
+		connection.subscribe(player); // <== 
+	}
+	try {
+		await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
+		// if ID == bot ID then return, or something. 
+		// Ended up not being necessary, bot doesn't register when it starts TALKING. 
+		// Don't know why but not going to look a gift horse in the mouth for the moment. 
+		// Should look into it at a future date though. 
+		connection.receiver.speaking.on("start", (userId) => {
+			///console.log(`${userId} start`);
+			TALKING.add(`${userId}`)
+		});
+		connection.receiver.speaking.on("end", (userId) => {
+			///console.log(`${userId} end`);
+			TALKING.delete(`${userId}`)
+		});
+		interaction.reply('Joined.');
+	} catch(error) {
+		console.warn(error); // Look into console.warn as compared to console.error. 
+	}
+	return;
+}
+cmd.what = function(interaction) {
+	interaction.reply(CURRENTLY_PLAYING);
+	return;
+}
+cmd.set = function(interaction) {
+	response = 'Volume was \`'+VOLUME+'\`, is '
+	VOLUME = interaction.options.getNumber('level') / 10.0;
+	response = response.concat('now \`'+VOLUME+'\`.');
+	interaction.reply(response);
+	return;
+}
+cmd.push = function(interaction) {
+	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
+	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+	for (song of songs)
+		PLAYLIST.push(song);
+	interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
+	//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
+	if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
+		play_front();
+	return;
+}
+cmd.jump = function(interaction) {
+	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
+	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+	for (let i=songs.length-1;i>=0;--i)
+		PLAYLIST.unshift(songs[i]);
+	interaction.reply("Prepended "+PLAYLIST[0]+".");
+	if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
+		play_front();
+	return;
+}
+cmd.damp = function(interaction) {
+	response = 'Damp was \`'+DAMP+'\`, is '
+	DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
+	// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
+	response = response.concat('now \`'+DAMP+'\`.');
+	interaction.reply(response);
+}
+cmd.history = function(interaction) {
+	response = [];
+	list(response,HISTORY);
+	//response = list([],HISTORY);
+	if (response.length === 0)
+		interaction.reply("No songs have been played.");
+	else
+		interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+	return;
+}
+cmd.auto = function(interaction) {
+	AUTO_PLAY = !AUTO_PLAY;
+	interaction.reply("Auto-play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
+	return;
+}
+cmd.next = function(interaction) {
+	play_front(); // Maybe I should just fold this into `skip`? 
+	interaction.reply("Forcibly playing "+CURRENTLY_PLAYING+'.');
+	return;
+}
+cmd.loop = function(interaction) {
+	LOOP = !LOOP;
+	interaction.reply("Will "+(LOOP?"now":"not")+" loop playlist.");
+	return;
+}
+cmd.keep = function(interaction) {
+	LOOP_FRONT = !LOOP_FRONT;
+	interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
+	return;
+}
+cmd.help = function(interaction) {
+	response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
+	for (const command of COMMANDS)
+		response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
+	interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+	return;
+}
+cmd.insert = function(interaction) {
+	index = interaction.options.getInteger('index') - 1;
+	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
+	songs = remove_non_URL_characters(interaction.options.getString('song')).split(' ');
+	PLAYLIST.splice(index,0,...songs);
+	interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
+//if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
+	// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
+	return;
+}
+cmd.strike = function (interaction) {
+	if (affirm(index < PLAYLIST.length && index >= 0,"Failed: index out of bounds.",interaction)) return;
+	song_removed = PLAYLIST[index];
+	PLAYLIST.splice(index,1);
+	interaction.reply("Removed "+song_removed+" from playlist.");
+	return;
+}
+cmd.fade = function(interaction) {
+	response = 'Fade was \`'+FADE_TIME+'\`, is '
+	FADE_TIME = interaction.options.getInteger('fade');
+	response = response.concat('now \`'+FADE_TIME+'\`.');
+	console.log(response);
+	interaction.reply(response);
+}
+
+// Program starts here. 
+// ====================
+
+const { Client, Intents } = require('discord.js')
+const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+//const { token } = require('./config.json');
+const ytdl = require("ytdl-core");
+
+
+const player = createAudioPlayer();
+const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
+let resource = createAudioResource(test, {inlineVolume: true});
+
+//const name = "Muze, ";
+
+
+const client = new Client({ 
+	intents: [
+		Intents.FLAGS.GUILDS,
+		Intents.FLAGS.GUILD_MEMBERS,
+		Intents.FLAGS.GUILD_VOICE_STATES,
+	],
+});
+
+client.once('ready', ()=> {
+	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
+	console.log('Ready!');
+	play_front(); // Why do we have this? 
+	let fade_time = FADE_TIME; // Should this be moved? 
+	setInterval( () => { // <== "While true, check every millisecond." 
+		if (TALKING.size > 0) { // If people are talking. 
+			resource.volume.setVolume(DAMP*VOLUME); // Set the volume to DAMP * VOLUME. 
+			fade_time = FADE_TIME;
+		}
+		else { // If people AREN'T talking. 
+			if (fade_time > 1)
+				--fade_time; 
+			let percentage = Math.min(((FADE_TIME - fade_time) / FADE_TIME) + DAMP, 1);
+			resource.volume.setVolume(percentage * VOLUME);
+		}
+	},1);
+});
+
+function sigmoid (input) { // !!! 
+	1 / (1 + 2.7182)
+}
+
+
+function kick() {
+	resource = createAudioResource(test, {inlineVolume: true});
+	player.play(resource);
+} // Don't think that we still need this. 
+
+//cmds // Navigational aid. 
+client.on('interactionCreate', async interaction => {
+try {
+	if (!interaction.isCommand()) return; // Watch out. 
+	// Is this deprecated? 
+
+	const { commandName } = interaction;
+	
+	try {
+		await cmd[commandName](interaction);
+	}
+	catch (error) {
+		console.error("The expected error.");
+	}
+
+	// if commandName === 'halt'  // Good name; for something. 
+	//Cmds // Navigational aid. 
+} catch (e) {
+	console.error(e);
+	console.error("Error in command function.");
+	}
+});
+
 function initialize_commands(initialize) {
 	// Add another parameter to wipe all commands in the future, that'd be cool. 
 
@@ -34,7 +300,7 @@ function initialize_commands(initialize) {
 	]
 		.map(command => command.toJSON());
 
-	// Add functionality to wipe commands. 
+	// Add functionality to wipe commands.  // TAGYOUIT. 
 	// if (wipe_commands) { /* do stuff */ } 
 	if (initialize) 
 	{
@@ -49,129 +315,22 @@ function initialize_commands(initialize) {
 	return commands;
 }
 
-// Program starts here. 
-// ====================
-
-const { Client, Intents } = require('discord.js')
-const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-//const { token } = require('./config.json');
-const ytdl = require("ytdl-core");
-
-
-const player = createAudioPlayer();
-const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
-let resource = createAudioResource(test, {inlineVolume: true});
-
-//const name = "Muze, ";
-
-
-const client = new Client({ 
-	intents: [
-		Intents.FLAGS.GUILDS,
-		Intents.FLAGS.GUILD_MEMBERS,
-		Intents.FLAGS.GUILD_VOICE_STATES,
-	],
-});
-
-// Variables and such. 
-const { token } = require('./config.json');
-var TALKING = new Set(); 
-var PLAYLIST = [];
-var HISTORY = [];
-	var PLAYING = false; // Find a better way to do this. 
-var COMMANDS = []; // This can REALLY be known at compile time. 
-var CURRENTLY_PLAYING = "Nothing played yet.";
-
-
-/*
-const LOOP = CONFIG.LOOP != undefined? CONFIG.LOOP : false;
-const LOOP_FRONT = CONFIG.LOOP_FRONT != undefined? CONFIG.LOOP_FRONT : false;
-const VOLUME = CONFIG.VOLUME != undefined? CONFIG.VOLUME : 1.0;
-const AUTO_PLAY = CONFIG.AUTO_PLAY != undefined? CONFIG.AUTO_PLAY : true;
-const DAMP = CONFIG.DAMP != undefined? CONFIG.DAMP : 0.1;
-const MAX_HISTORY_SIZE = CONFIG.MAX_HISTORY_SIZE != undefined? CONFIG.MAX_HISTORY_SIZE : 100;
-const MAX_PLAYLIST_SIZE = CONFIG.MAX_PLAYLIST_SIZE != undefined? CONFIG.MAX_PLAYLIST_SIZE : 50;
-const LOCK_TO_CHANNEL_ONCE_JOINED = CONFIG.LOCK_TO_CHANNEL_ONCE_JOINED != undefined? CONFIG.LOCK_TO_CHANNEL_ONCE_JOINED : false;
-*/
-
-let { // `yawny`. 
-	LOOP = false,
-	LOOP_FRONT = false, 
-	VOLUME = 1.0,
-	AUTO_PLAY = true,
-	DAMP = 0.1,
-	MAX_HISTORY_SIZE = 100,
-	MAX_PLAYLIST_SIZE = 50,
-	LOCK_TO_CHANNEL_ONCE_JOINED = false,
-	FADE_TIME = 5000
-} = require('./config.json');
-
-// Variables and such. 
-// Maybe these should all be `const`s locked to the `config.json`?  //syzygy
-//const {token,LOOP,LOOP_FRONT,VOLUME,DAMP,MAX_HISTORY_SIZE,MAX_PLAYLIST_SIZE,LOCK_TO_CHANNEL_ONCE_JOINED} = require('./config.json');
-
-function execute(fn){
-	fn();
-}
-
-function hello(){
-	console.log("Hello, world!");
-}
-
-client.once('ready', ()=> {
-	console.log(remove_non_URL_characters("https://www.youtube.com/watch?v=A6xmmMuNUUs&list=RDMM&start_radio=1, -%$!@#A https://www.youtube.com/watch?v=A6xmmMuNUUs&list=RDMM&start_radio=1"));
-	//let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
-	//everything["testfunction"]();
-	console.log(global.hello);
-	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
-	console.log(LOOP);
-	//console.log(COMMANDS);
-	/*
-	for (const command of COMMANDS) { // Why did `Java`Script use `const` rather than `final`?  So weird. 
-		console.log(command.name);
-		console.log(command.description);
+// Utility functions. 
+function capitalize(string){
+	if (typeof string != 'string' || string.length < 1) {
+		console.error("Error in `capitalize()`.")
+		return string;
 	}
-	*/
-	//global.kick(); // Have to use global rather than window rather than eval. 
-	console.log('Ready!');
-	   //player.play(resource); // <==
-	play_front();
-	let fade_time = FADE_TIME;
-	setInterval( () => { // <== "While true, check every millisecond." 
-		if (TALKING.size > 0) { // If people are talking. 
-			resource.volume.setVolume(DAMP*VOLUME); // Set the volume to DAMP * VOLUME. 
-			fade_time = FADE_TIME;
-		}
-		else { // If people AREN'T talking. 
-			//console.log(fade_time);
-			if (fade_time > 1)
-				--fade_time; 
-
-			// FADE_TIME AS A PERCENTAGE. 
-			//if (fade_time < (2/3)*FADE_TIME) 
-			let percentage = Math.min(((FADE_TIME - fade_time) / FADE_TIME) + DAMP, 1);
-			resource.volume.setVolume(percentage * VOLUME);
-		}
-	},1);
-});
-
-function sigmoid (input) {
-	1 / (1 + 2.7182)
+	return string.charAt(0).toUpperCase().concat(string.slice(1));
 }
 
-/*
-client.once('ready',setInterval(()=>{
-	if (TALKING.size > 0)
-		resource.volume.setVolume(DAMP*VOLUME);
-	else
-		resource.volume.setVolume(VOLUME);
-}, 1)); // One line this? 
-*/
 
-function kick() {
-	resource = createAudioResource(test, {inlineVolume: true});
-	player.play(resource);
-} // Don't think that we still need this. 
+	player.on(AudioPlayerStatus.Idle, () => {
+		PLAYING = false;
+		play_front();
+	});
+
+//player.on(AudioPlayerStatus.Idle, play_front()); // <=== 
 
 async function list(response,list_given) {
 	for (let i=0;i<list_given.length;++i)
@@ -190,205 +349,6 @@ async function list(response,list_given) {
 	}
 	return response;
 }
-
-//cmds // Navigational aid. 
-client.on('interactionCreate', async interaction => {
-try {
-	if (!interaction.isCommand()) return; // Watch out. 
-	// Is this deprecated? 
-
-	const { commandName } = interaction;
-	
-	if (commandName === 'list') {
-		response = [];
-		await list(response,PLAYLIST);
-		//await response = list([],PLAYLIST); // But why not? 
-
-		if (response.length === 0)
-			await interaction.reply("Playlist empty.");
-		else
-			await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
-		return;
-	}
-	if (commandName === 'kick') {
-		kick();
-		await interaction.reply('\`*Rattle*\`');
-		return;
-	}
-	if (commandName === 'skip') {
-		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and AUTO_PLAY. 
-		player.stop();
-		await interaction.reply('Skipping.');
-		return;
-	}
-	if (commandName === 'stop') {
-		player.pause();
-		await interaction.reply('Paused.');
-		return;
-	}
-	if (commandName === 'play') {
-		player.unpause(); // Use && and fit into a single line instead? 
-		await interaction.reply('Resumed.'); 
-		return;
-	}
-	if (commandName === 'join'){
-		var connection = getVoiceConnection(interaction.guildId)
-		if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
-			connection = joinVoiceChannel({
-				channelId: interaction.member.voice.channelId,
-				guildId: interaction.guildId,
-				adapterCreator: interaction.guild.voiceAdapterCreator,
-				selfDeaf: false,
-				selfMute: false,
-			});
-			connection.subscribe(player); // <== 
-		}
-		try {
-			await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
-			// if ID == bot ID then return, or something. 
-			// Ended up not being necessary, bot doesn't register when it starts TALKING. 
-			// Don't know why but not going to look a gift horse in the mouth for the moment. 
-			// Should look into it at a future date though. 
-			connection.receiver.speaking.on("start", (userId) => {
-				///console.log(`${userId} start`);
-				TALKING.add(`${userId}`)
-			});
-			connection.receiver.speaking.on("end", (userId) => {
-				///console.log(`${userId} end`);
-				TALKING.delete(`${userId}`)
-			});
-			interaction.reply('Joined.');
-		} catch(error) {
-			console.warn(error); // Look into console.warn as compared to console.error. 
-		}
-		return;
-	}
-	if (commandName === 'what'){
-		await interaction.reply(CURRENTLY_PLAYING);
-		return;
-	}
-	if (commandName === 'set'){
-		response = 'Volume was \`'+VOLUME+'\`, is '
-		VOLUME = interaction.options.getNumber('level') / 10.0;
-		response = response.concat('now \`'+VOLUME+'\`.');
-		await interaction.reply(response);
-		return;
-	}
-	if (commandName === 'push'){
-		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-		songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
-		for (song of songs)
-			PLAYLIST.push(song);
-		await interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
-		//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
-		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
-			play_front();
-		return;
-	}
-	if (commandName === 'jump') {
-		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-		songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
-		for (let i=songs.length-1;i>=0;--i)
-			PLAYLIST.unshift(songs[i]);
-		await interaction.reply("Prepended "+PLAYLIST[0]+".");
-		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
-			play_front();
-		return;
-	}
-	if (commandName === 'damp'){
-		response = 'Damp was \`'+DAMP+'\`, is '
-		DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
-		// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
-		response = response.concat('now \`'+DAMP+'\`.');
-		await interaction.reply(response);
-	}
-	if (commandName === 'history'){
-		response = [];
-		await list(response,HISTORY);
-		//await response = list([],HISTORY);
-		if (response.length === 0)
-			await interaction.reply("No songs have been played.");
-		else
-			await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
-		return;
-	}
-	if (commandName === 'auto'){
-		AUTO_PLAY = !AUTO_PLAY;
-		await interaction.reply("Auto-play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
-		return;
-	}
-	if (commandName == 'next'){ 
-		play_front(); // Maybe I should just fold this into `skip`? 
-		await interaction.reply("Forcibly playing "+CURRENTLY_PLAYING+'.');
-		return;
-	}
-	if (commandName === 'loop'){
-		LOOP = !LOOP;
-		await interaction.reply("Will "+(LOOP?"now":"not")+" loop playlist.");
-		return;
-	}
-	if (commandName === 'keep'){
-		LOOP_FRONT = !LOOP_FRONT;
-		await interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
-		return;
-	}
-	if (commandName === 'help'){
-		response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
-		for (const command of COMMANDS)
-			response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
-		await interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
-		return;
-	}
-	if (commandName === 'insert'){
-		index = interaction.options.getInteger('index') - 1;
-		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
-		//PLAYLIST.splice(index,0,interaction.options.getString('song'));
-		songs = remove_non_URL_characters(interaction.options.getString('song')).split(' ');
-		PLAYLIST.splice(index,0,...songs);
-		await interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
-//if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
-		// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
-		return;
-	}
-	if (commandName === 'strike') {
-		index = interaction.options.getInteger('index') - 1;
-		if (affirm(index < PLAYLIST.length && index >= 0),"Failed: index out of bounds.",interaction) return;
-		song_removed = PLAYLIST[index];
-		PLAYLIST.splice(index,1);
-		await interaction.reply("Removed "+song_removed+" from playlist.");
-		return;
-	}
-	if (commandName === 'fade') {
-		response = 'Fade was \`'+FADE_TIME+'\`, is '
-		FADE_TIME = interaction.options.getInteger('fade');
-		response = response.concat('now \`'+FADE_TIME+'\`.');
-		console.log(response);
-		await interaction.reply(response);
-	}
-
-	// if commandName === 'halt'  // Good name; for something. 
-	//Cmds // Navigational aid. 
-} catch (e) {
-	console.error(e);
-	console.error("Error in command function.");
-	}
-});
-
-function capitalize(string){
-	if (typeof string != 'string' || string.length < 1) {
-		console.error("Error in `capitalize()`.")
-		return string;
-	}
-	return string.charAt(0).toUpperCase().concat(string.slice(1));
-}
-
-
-	player.on(AudioPlayerStatus.Idle, () => {
-		PLAYING = false;
-		play_front();
-	});
-
-//player.on(AudioPlayerStatus.Idle, play_front()); // <=== 
 
 function play_front() {
 	console.log('Play_front()');
@@ -429,10 +389,14 @@ function play_front() {
 
 // Should this be `async-await`ish? 
 function affirm(conditional, error_msg, interaction){ // Bullying the macroless language into having macros. 
-	if (!conditional)
-		interaction.reply(error_msg);
-	console.log("Affirm returning",conditional+'.');
-	return !conditional;
+	if (conditional)
+		return false;
+	console.log("Affirm failed.");
+	return true;
+//	if (!conditional)
+//		interaction.reply(error_msg);
+//	console.log("Affirm returning",!conditional+'.');
+//	return !conditional;
 }
 
 function remove_non_URL_characters(string){
@@ -474,6 +438,8 @@ client.login(token);
 //TODO: Have `interaction.reply` by voice. 
 //TODO: Make `remove_non_URL_characters` better. 
 //TODO: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
+//TODO: CTRL+F "TAGYOUIT."
+//TODO: Consider what global variables should be `const` and assign them appropriately. 
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 

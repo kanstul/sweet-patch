@@ -1,51 +1,19 @@
-function initialize_commands(initialize) {
-	// Add another parameter to wipe all commands in the future, that'd be cool. 
+cmd = new Object;
 
-		if (typeof initialize != 'boolean'){ // What the actual fuck is this language. 
-			console.error('Function `initialize_commands()` was called with an invalid type.');
-			return [];
-		}
+cmd.strike = function (interaction) {
+	if (affirm(index < PLAYLIST.length && index >= 0,"Failed: index out of bounds.",interaction)) return;
+	song_removed = PLAYLIST[index];
+	PLAYLIST.splice(index,1);
+	interaction.reply("Removed "+song_removed+" from playlist.");
+	return;
+}
 
-	const { SlashCommandBuilder } = require('@discordjs/builders');
-	// Never mind, this language is fucking rad.  You can cause shit to happen in wacky orders by exploiting { } in a function that's being called asynchronously.  That's COOL. 
-
-	const commands = [
-		new SlashCommandBuilder().setName('list').setDescription('Lists playlist.'),
-		new SlashCommandBuilder().setName('skip').setDescription('Skips to the next song.'),
-		new SlashCommandBuilder().setName('stop').setDescription('Pauses song.'),
-		new SlashCommandBuilder().setName('play').setDescription('Resumes song.'),
-		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
-		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
-		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
-		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
-		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('song').setDescription('The song appended.').setRequired(true)),
-		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('song').setDescription('The song prepended.').setRequired(true)),
-		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
-		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
-		new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
-		new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
-		new SlashCommandBuilder().setName('loop').setDescription('Continually plays the current song.'),
-		new SlashCommandBuilder().setName('keep').setDescription('Played songs are immediately appended to the end of the playlist.'),
-		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
-		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
-		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
-		// Use commas. 
-	]
-		.map(command => command.toJSON());
-
-	// Add functionality to wipe commands. 
-	// if (wipe_commands) { /* do stuff */ } 
-	if (initialize) 
-	{
-		const { REST } = require('@discordjs/rest');
-		const { Routes } = require('discord-api-types/v9');
-		const { clientId, guildId, token } = require('./config.json');
-		const rest = new REST({ version: '9' }).setToken(token);
-		rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
-			.then(() => console.log('Registration complete.'))
-			.catch(console.error);
-	}
-	return commands;
+cmd.fade = function(interaction) {
+	response = 'Fade was \`'+FADE_TIME+'\`, is '
+	FADE_TIME = interaction.options.getInteger('fade');
+	response = response.concat('now \`'+FADE_TIME+'\`.');
+	console.log(response);
+	interaction.reply(response);
 }
 
 // Program starts here. 
@@ -101,7 +69,8 @@ let { // `yawny`.
 	DAMP = 0.1,
 	MAX_HISTORY_SIZE = 100,
 	MAX_PLAYLIST_SIZE = 50,
-	LOCK_TO_CHANNEL_ONCE_JOINED = false
+	LOCK_TO_CHANNEL_ONCE_JOINED = false,
+	FADE_TIME = 5000
 } = require('./config.json');
 
 // Variables and such. 
@@ -117,6 +86,8 @@ function hello(){
 }
 
 client.once('ready', ()=> {
+	console.log(remove_non_URL_characters("https://www.youtube.com/watch?v=A6xmmMuNUUs&list=RDMM&start_radio=1, -%$!@#A https://www.youtube.com/watch?v=A6xmmMuNUUs&list=RDMM&start_radio=1"));
+	//let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
 	//everything["testfunction"]();
 	console.log(global.hello);
 	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
@@ -132,15 +103,28 @@ client.once('ready', ()=> {
 	console.log('Ready!');
 	   //player.play(resource); // <==
 	play_front();
-	setInterval( () => {
-		if (TALKING.size > 0) {
-			resource.volume.setVolume(DAMP*VOLUME);
+	let fade_time = FADE_TIME;
+	setInterval( () => { // <== "While true, check every millisecond." 
+		if (TALKING.size > 0) { // If people are talking. 
+			resource.volume.setVolume(DAMP*VOLUME); // Set the volume to DAMP * VOLUME. 
+			fade_time = FADE_TIME;
 		}
-		else {
-			resource.volume.setVolume(VOLUME);
+		else { // If people AREN'T talking. 
+			//console.log(fade_time);
+			if (fade_time > 1)
+				--fade_time; 
+
+			// FADE_TIME AS A PERCENTAGE. 
+			//if (fade_time < (2/3)*FADE_TIME) 
+			let percentage = Math.min(((FADE_TIME - fade_time) / FADE_TIME) + DAMP, 1);
+			resource.volume.setVolume(percentage * VOLUME);
 		}
 	},1);
 });
+
+function sigmoid (input) {
+	1 / (1 + 2.7182)
+}
 
 /*
 client.once('ready',setInterval(()=>{
@@ -259,7 +243,9 @@ try {
 	}
 	if (commandName === 'push'){
 		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-		PLAYLIST.push(interaction.options.getString('song'));
+		songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+		for (song of songs)
+			PLAYLIST.push(song);
 		await interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 		//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
 		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
@@ -268,14 +254,16 @@ try {
 	}
 	if (commandName === 'jump') {
 		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-		PLAYLIST.unshift(interaction.options.getString('song'));
+		songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+		for (let i=songs.length-1;i>=0;--i)
+			PLAYLIST.unshift(songs[i]);
 		await interaction.reply("Prepended "+PLAYLIST[0]+".");
 		if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 			play_front();
 		return;
 	}
 	if (commandName === 'damp'){
-		response = 'Volume was \`'+DAMP+'\`, is '
+		response = 'Damp was \`'+DAMP+'\`, is '
 		DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
 		// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
 		response = response.concat('now \`'+DAMP+'\`.');
@@ -321,19 +309,27 @@ try {
 	if (commandName === 'insert'){
 		index = interaction.options.getInteger('index') - 1;
 		if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
-		PLAYLIST.splice(index,0,interaction.options.getString('song'));
+		//PLAYLIST.splice(index,0,interaction.options.getString('song'));
+		songs = remove_non_URL_characters(interaction.options.getString('song')).split(' ');
+		PLAYLIST.splice(index,0,...songs);
 		await interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
 //if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
 		// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
 		return;
 	}
 	if (commandName === 'strike') {
-		index = interaction.options.getInteger('index') - 1;
-		if (affirm(index < PLAYLIST.length && index >= 0),"Failed: index out of bounds.",interaction) return;
-		song_removed = PLAYLIST[index];
-		PLAYLIST.splice(index,1);
-		await interaction.reply("Removed "+song_removed+" from playlist.");
+		await cmd.strike(interaction);
 		return;
+	}
+	if (commandName === 'fade') {
+		await cmd.fade(interaction);
+		/*
+		response = 'Fade was \`'+FADE_TIME+'\`, is '
+		FADE_TIME = interaction.options.getInteger('fade');
+		response = response.concat('now \`'+FADE_TIME+'\`.');
+		console.log(response);
+		await interaction.reply(response);
+		*/
 	}
 
 	// if commandName === 'halt'  // Good name; for something. 
@@ -344,6 +340,60 @@ try {
 	}
 });
 
+
+
+function initialize_commands(initialize) {
+	// Add another parameter to wipe all commands in the future, that'd be cool. 
+
+		if (typeof initialize != 'boolean'){ // What the actual fuck is this language. 
+			console.error('Function `initialize_commands()` was called with an invalid type.');
+			return [];
+		}
+
+	const { SlashCommandBuilder } = require('@discordjs/builders');
+	// Never mind, this language is fucking rad.  You can cause shit to happen in wacky orders by exploiting { } in a function that's being called asynchronously.  That's COOL. 
+
+	const commands = [
+		new SlashCommandBuilder().setName('list').setDescription('Lists playlist.'),
+		new SlashCommandBuilder().setName('skip').setDescription('Skips to the next song.'),
+		new SlashCommandBuilder().setName('stop').setDescription('Pauses song.'),
+		new SlashCommandBuilder().setName('play').setDescription('Resumes song.'),
+		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
+		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
+		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
+		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
+		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('song').setDescription('The song appended.').setRequired(true)),
+		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('song').setDescription('The song prepended.').setRequired(true)),
+		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
+		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
+		new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
+		new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
+		new SlashCommandBuilder().setName('loop').setDescription('Continually plays the current song.'),
+		new SlashCommandBuilder().setName('keep').setDescription('Played songs are immediately appended to the end of the playlist.'),
+		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
+		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
+		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
+		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
+		// Use commas. 
+	]
+		.map(command => command.toJSON());
+
+	// Add functionality to wipe commands.  // TAGYOUIT. 
+	// if (wipe_commands) { /* do stuff */ } 
+	if (initialize) 
+	{
+		const { REST } = require('@discordjs/rest');
+		const { Routes } = require('discord-api-types/v9');
+		const { clientId, guildId, token } = require('./config.json');
+		const rest = new REST({ version: '9' }).setToken(token);
+		rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
+			.then(() => console.log('Registration complete.'))
+			.catch(console.error);
+	}
+	return commands;
+}
+
+// Utility functions. 
 function capitalize(string){
 	if (typeof string != 'string' || string.length < 1) {
 		console.error("Error in `capitalize()`.")
@@ -399,10 +449,28 @@ function play_front() {
 
 // Should this be `async-await`ish? 
 function affirm(conditional, error_msg, interaction){ // Bullying the macroless language into having macros. 
-	if (!conditional)
-		interaction.reply(error_msg);
-	console.log("Affirm returning",conditional+'.');
-	return !conditional;
+	if (conditional)
+		return false;
+	console.log("Affirm failed.");
+	return true;
+//	if (!conditional)
+//		interaction.reply(error_msg);
+//	console.log("Affirm returning",!conditional+'.');
+//	return !conditional;
+}
+
+function remove_non_URL_characters(string){
+	let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+;="; // , // Comma is deliberately excluded; is that prudent? 
+	original_string = string;
+	fnl = "";
+	for (c of legal_characters)
+		string = string.replaceAll(c,' ');
+	for (let i=0;i<original_string.length;++i)
+		fnl = fnl.concat(string.charAt(i) == ' '? original_string.charAt(i) : ' ');
+	//console.log("Original string is  "+original_string);
+	//console.log("String is           "+string);
+	//console.log("Sanitized string is "+fnl);
+	return fnl;
 }
 
 client.login(token);
@@ -426,6 +494,11 @@ client.login(token);
 //TODO: CTRL+F "But why not?"
 //TODO: Implement `abscond`. 
 //TODO: Play from timestamp! 
+//TODO: Add multiple songs with a single command. 
+//TODO: Have `interaction.reply` by voice. 
+//TODO: Make `remove_non_URL_characters` better. 
+//TODO: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
+//TODO: CTRL+F "TAGYOUIT."
 
 //DONE: 
 // TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
