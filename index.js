@@ -17,7 +17,11 @@ let { // `yawny`.
 	MAX_HISTORY_SIZE = 100,
 	MAX_PLAYLIST_SIZE = 50,
 	LOCK_TO_CHANNEL_ONCE_JOINED = false,
-	FADE_TIME = 5000
+	FADE_TIME = 5000,
+	REQUIRE_ROLE_TO_USE = false,
+	BOT_USERS = "everyone",
+	REQUIRE_ROLE_FOR_VOLUME = false,
+	VOLUME_USERS = "everyone"
 } = require('./config.json');
 // Variables and such. 
 //const {token,LOOP,LOOP_FRONT,VOLUME,DAMP,MAX_HISTORY_SIZE,MAX_PLAYLIST_SIZE,LOCK_TO_CHANNEL_ONCE_JOINED} = require('./config.json');
@@ -31,36 +35,47 @@ cmd.list = async function(interaction) {
 	//response = list([],PLAYLIST); // But why not? 
 
 	if (response.length === 0)
-		interaction.reply("Playlist empty.");
+		respond(interaction,"Playlist empty.");
 	else
-		interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+		respond(interaction,'\`\`\`'+response.join('\n')+'\`\`\`');
 	return;
 }
 cmd.kick = function(interaction) {
 	kick();
-	interaction.reply('\`*Rattle*\`');
+	respond(interaction,'\`*Rattle*\`');
 	return;
 }
 cmd.skip = function(interaction) {
 	// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and AUTO_PLAY. 
 	player.stop();
-	interaction.reply('Skipping.');
+	respond(interaction,'Skipping.');
 	return;
 }
 cmd.stop = function(interaction) {
 	player.pause();
-	interaction.reply('Paused.');
+	respond(interaction,'Paused.');
 	return;
 }
 cmd.play = function(interaction) {
 	player.unpause(); // Use && and fit into a single line instead? 
-	interaction.reply('Resumed.'); 
+	respond(interaction,'Resumed.'); 
 	return;
 }
 cmd.join = async function(interaction) {
-	var connection = getVoiceConnection(interaction.guildId)
+	/*
+	var user_connection = getVoiceConnection(interaction.guildId)
+	console.log(user_connection);
+	//console.log("In join, "+connection+".");
+	if (user_connection == undefined) {
+		interaction.reply("You are not in a voice channel.");
+		return;
+	} // Some other time. 
+	*/
+
+	var connection = getVoiceConnection(interaction.guildId);
+
 	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
-		connection = joinVoiceChannel({
+		/*var */connection = joinVoiceChannel({
 			channelId: interaction.member.voice.channelId,
 			guildId: interaction.guildId,
 			adapterCreator: interaction.guild.voiceAdapterCreator,
@@ -76,28 +91,31 @@ cmd.join = async function(interaction) {
 		// Don't know why but not going to look a gift horse in the mouth for the moment. 
 		// Should look into it at a future date though. 
 		connection.receiver.speaking.on("start", (userId) => {
-			///console.log(`${userId} start`);
 			TALKING.add(`${userId}`)
 		});
 		connection.receiver.speaking.on("end", (userId) => {
-			///console.log(`${userId} end`);
 			TALKING.delete(`${userId}`)
 		});
-		interaction.reply('Joined.');
+		respond(interaction,'Joined.');
 	} catch(error) {
 		console.warn(error); // Look into console.warn as compared to console.error. 
+		respond(interaction,'Error in join function.');
 	}
 	return;
 }
 cmd.what = function(interaction) {
-	interaction.reply(CURRENTLY_PLAYING);
+	respond(interaction,CURRENTLY_PLAYING);
 	return;
 }
 cmd.set = function(interaction) {
+	if (REQUIRE_ROLE_FOR_VOLUME && !interactions.member.roles.cache.some(r => r.name === VOLUME_USERS)) {
+		respond(interaction,"You must have the "+VOLUME_USERS+" role to adjust the volume.  It is currently "+VOLUME+'.');
+		return;
+	}
 	response = 'Volume was \`'+VOLUME+'\`, is '
 	VOLUME = interaction.options.getNumber('level') / 10.0;
 	response = response.concat('now \`'+VOLUME+'\`.');
-	interaction.reply(response);
+	respond(interaction,response);
 	return;
 }
 cmd.push = function(interaction) {
@@ -105,7 +123,7 @@ cmd.push = function(interaction) {
 	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
 	for (song of songs)
 		PLAYLIST.push(song);
-	interaction.reply("Appended "+PLAYLIST[PLAYLIST.length-1]+".");
+	respond(interaction,"Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 	//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
 	if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 		play_front();
@@ -116,7 +134,7 @@ cmd.jump = function(interaction) {
 	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
 	for (let i=songs.length-1;i>=0;--i)
 		PLAYLIST.unshift(songs[i]);
-	interaction.reply("Prepended "+PLAYLIST[0]+".");
+	respond(interaction,"Prepended "+PLAYLIST[0]+".");
 	if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) 
 		play_front();
 	return;
@@ -126,43 +144,43 @@ cmd.damp = function(interaction) {
 	DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
 	// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
 	response = response.concat('now \`'+DAMP+'\`.');
-	interaction.reply(response);
+	respond(interaction,response);
 }
 cmd.history = function(interaction) {
 	response = [];
 	list(response,HISTORY);
 	//response = list([],HISTORY);
 	if (response.length === 0)
-		interaction.reply("No songs have been played.");
+		respond(interaction,"No songs have been played.");
 	else
-		interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+		respond(interaction,'\`\`\`'+response.join('\n')+'\`\`\`');
 	return;
 }
 cmd.auto = function(interaction) {
 	AUTO_PLAY = !AUTO_PLAY;
-	interaction.reply("Auto-play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
+	respond(interaction,"Auto-play is now "+(AUTO_PLAY?"on.":"off.")); // The ternary operator isn't professional; just for fun. 
 	return;
 }
 cmd.next = function(interaction) {
 	play_front(); // Maybe I should just fold this into `skip`? 
-	interaction.reply("Forcibly playing "+CURRENTLY_PLAYING+'.');
+	respond(interaction,"Forcibly playing "+CURRENTLY_PLAYING+'.');
 	return;
 }
 cmd.loop = function(interaction) {
 	LOOP = !LOOP;
-	interaction.reply("Will "+(LOOP?"now":"not")+" loop playlist.");
+	respond(interaction,"Will "+(LOOP?"now":"not")+" loop playlist.");
 	return;
 }
 cmd.keep = function(interaction) {
 	LOOP_FRONT = !LOOP_FRONT;
-	interaction.reply("Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
+	respond(interaction,"Will "+(LOOP_FRONT?"now":"not")+" loop first song.");
 	return;
 }
 cmd.help = function(interaction) {
 	response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
 	for (const command of COMMANDS)
 		response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
-	interaction.reply('\`\`\`'+response.join('\n')+'\`\`\`');
+	respond(interaction,'\`\`\`'+response.join('\n')+'\`\`\`');
 	return;
 }
 cmd.insert = function(interaction) {
@@ -170,7 +188,7 @@ cmd.insert = function(interaction) {
 	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
 	songs = remove_non_URL_characters(interaction.options.getString('song')).split(' ');
 	PLAYLIST.splice(index,0,...songs);
-	interaction.reply("Inserted "+PLAYLIST[index+1]+'.');
+	respond(interaction,"Inserted "+PLAYLIST[index+1]+'.');
 //if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
 	// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
 	return;
@@ -179,7 +197,7 @@ cmd.strike = function (interaction) {
 	if (affirm(index < PLAYLIST.length && index >= 0,"Failed: index out of bounds.",interaction)) return;
 	song_removed = PLAYLIST[index];
 	PLAYLIST.splice(index,1);
-	interaction.reply("Removed "+song_removed+" from playlist.");
+	respond(interaction,"Removed "+song_removed+" from playlist.");
 	return;
 }
 cmd.fade = function(interaction) {
@@ -187,7 +205,10 @@ cmd.fade = function(interaction) {
 	FADE_TIME = interaction.options.getInteger('fade');
 	response = response.concat('now \`'+FADE_TIME+'\`.');
 	console.log(response);
-	interaction.reply(response);
+	respond(interaction,response);
+}
+cmd.pop = function(interaction) {
+	respond(interaction,"Removed "+PLAYLIST.pop()+" from playlist.");
 }
 
 // Program starts here. 
@@ -203,8 +224,6 @@ const player = createAudioPlayer();
 const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
 let resource = createAudioResource(test, {inlineVolume: true});
 
-//const name = "Muze, ";
-
 
 const client = new Client({ 
 	intents: [
@@ -215,7 +234,9 @@ const client = new Client({
 });
 
 client.once('ready', ()=> {
-	COMMANDS = initialize_commands(true); //! Use argc/argv here. 
+	let argv = process.argv; // Should this be global? 
+	console.log(argv);
+	COMMANDS = initialize_commands(!argv.includes('fast')); //! Use argc/argv here. 
 	console.log('Ready!');
 	play_front(); // Why do we have this? 
 	let fade_time = FADE_TIME; // Should this be moved? 
@@ -248,6 +269,12 @@ client.on('interactionCreate', async interaction => {
 try {
 	if (!interaction.isCommand()) return; // Watch out. 
 	// Is this deprecated? 
+	
+	//console.log(interaction.member.roles.cache.some(r => r.name === "Penguins"));
+	if (REQUIRE_ROLE_TO_USE && !interactions.member.roles.cache.some(r => r.name === BOT_USERS)){
+		respond(interaction,"You must have the "+BOT_USERS+" role to use the bot.");
+		return;
+	}
 
 	const { commandName } = interaction;
 	
@@ -292,12 +319,13 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
 		new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
 		new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
-		new SlashCommandBuilder().setName('loop').setDescription('Continually plays the current song.'),
-		new SlashCommandBuilder().setName('keep').setDescription('Played songs are immediately appended to the end of the playlist.'),
+		new SlashCommandBuilder().setName('loop').setDescription('Played songs are immediately appended to the end of the playlist.'),
+		new SlashCommandBuilder().setName('keep').setDescription('Continually plays the current song.'),
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
 		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
 		new SlashCommandBuilder().setName('strike').setDescription('Removes song at a given index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
 		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
+		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -415,36 +443,43 @@ function remove_non_URL_characters(string){
 	return fnl;
 }
 
+function respond(interaction,msg) {
+	console.log(msg);
+	interaction.reply(msg);
+	return;
+}
+
 client.login(token);
 
-// TODO: Add a function to delete the last song.  (What to name it?) 
-// TODO: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
+// TODO: Play from timestamp! 
+// TODO: Affirm commands by voice. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "REALLY MOVE". 
 // TODO: Re-order the list that the commands go in. 
-//
-// TODO: CTRL+F "syzygy" !!!!
-//
-//TODO: CTRL+F "//!" 
-//TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
-//TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
-//TODO: Clean up the file directory. 
-//TODO: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
-//TODO: CTRL+F "Find a better way to do this."
-//TODO: CTRL+F "Weird bug."
-//TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
-//TODO: CTRL+F "But why not?"
-//TODO: Implement `abscond`. 
-//TODO: Play from timestamp! 
-//TODO: Add multiple songs with a single command. 
-//TODO: Have `interaction.reply` by voice. 
-//TODO: Make `remove_non_URL_characters` better. 
-//TODO: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
-//TODO: CTRL+F "TAGYOUIT."
-//TODO: Consider what global variables should be `const` and assign them appropriately. 
-//TODO: Fix that damnable `async` nonsense that's going on in the `cmd.list` function! 
+// TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
+// TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
+// TODO: Clean up the file directory. 
+// TODO: CTRL+F "Find a better way to do this."
+// TODO: CTRL+F "Weird bug."
+// TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
+// TODO: CTRL+F "But why not?"
+// TODO: Implement `abscond`. 
+// TODO: Have `interaction.reply` by voice. 
+// TODO: Make `remove_non_URL_characters` better. 
+// TODO: CTRL+F "TAGYOUIT."
+// TODO: Consider what global variables should be `const` and assign them appropriately. 
+// TODO: Fix that damnable `async` nonsense that's going on in the `cmd.list` function! 
+// TODO: Pick some more careful names for the `argv`s. 
+// TODO: CTRL+F "Some other time."
+
+//TEST: 
+// TEST: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
+// TEST: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
+// TEST: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
 
 //DONE: 
-// TODO: Check if using `if` rather than `else if` wouldn't be faster since the whole function is asynchronous. 
 // DONE: Add a function to insert a song at a given index. 
 // DONE: Add a function that deletes a song given an index.  (Not hard; have headache.) 
+// DONE: Add multiple songs with a single command. 
+// DONE?: CTRL+F "syzygy" !!!!
+// DONE: Add a function to delete the last song.  (What to name it?) 
