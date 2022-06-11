@@ -1,3 +1,4 @@
+//
 // Variables and such. 
 const { token } = require('./config.json');
 var TALKING = new Set(); 
