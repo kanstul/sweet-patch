@@ -7,6 +7,7 @@ var HISTORY = [];
 	var PLAYING = false; // Find a better way to do this. 
 var COMMANDS = []; // This can REALLY be known at compile time. 
 var CURRENTLY_PLAYING = "Nothing played yet.";
+var connection = null;
 
 let { // `yawny`. 
 	LOOP = false,
@@ -72,7 +73,7 @@ cmd.join = async function(interaction) {
 	} // Some other time. 
 	*/
 
-	var connection = getVoiceConnection(interaction.guildId);
+	connection = getVoiceConnection(interaction.guildId);
 
 	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
 		/*var */connection = joinVoiceChannel({
@@ -104,7 +105,10 @@ cmd.join = async function(interaction) {
 	return;
 }
 cmd.what = function(interaction) {
-	respond(interaction,CURRENTLY_PLAYING);
+	console.log("Currently playing is: "+CURRENTLY_PLAYING);
+	//respond(interaction,CURRENTLY_PLAYING);
+	console.log(CURRENTLY_PLAYING);
+	interaction.reply(CURRENTLY_PLAYING);
 	return;
 }
 cmd.set = function(interaction) {
@@ -122,10 +126,13 @@ cmd.push = function(interaction) {
 	let previous_playlist_length = PLAYLIST.length;
 
 	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+	songs = remove_non_URL_characters(interaction.options.getString('url')).split(" ");
 	for (song of songs)
 		PLAYLIST.push(song);
-	respond(interaction,"Appended "+PLAYLIST[PLAYLIST.length-1]+".");
+	if (connection === null)
+		cmd.join(interaction);
+	else
+		respond(interaction,"Appended "+PLAYLIST[PLAYLIST.length-1]+".");
 	//console.log("Appended",PLAYLIST[PLAYLIST.length-1]+"."); // Interesting that the pythonish `,` notation doesn't work in repl- wait, never mind, I get it now. 
 	if (!PLAYING && AUTO_PLAY && previous_playlist_length === 0) 
 		play_front();
@@ -135,7 +142,7 @@ cmd.jump = function(interaction) {
 	let previous_playlist_length = PLAYLIST.length;
 
 	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE, "Couldn't add, playlist full.", interaction)) return;
-	songs = remove_non_URL_characters(interaction.options.getString('song')).split(" ");
+	songs = remove_non_URL_characters(interaction.options.getString('url')).split(" ");
 	for (let i=songs.length-1;i>=0;--i)
 		PLAYLIST.unshift(songs[i]);
 	respond(interaction,"Prepended "+PLAYLIST[0]+".");
@@ -190,7 +197,7 @@ cmd.help = function(interaction) {
 cmd.insert = function(interaction) {
 	index = interaction.options.getInteger('index') - 1;
 	if (affirm(PLAYLIST.length <= MAX_PLAYLIST_SIZE && index < PLAYLIST.length,"Index out of bounds.",interaction)) return;
-	songs = remove_non_URL_characters(interaction.options.getString('song')).split(' ');
+	songs = remove_non_URL_characters(interaction.options.getString('url')).split(' ');
 	PLAYLIST.splice(index,0,...songs);
 	respond(interaction,"Inserted "+PLAYLIST[index+1]+'.');
 //if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
@@ -198,7 +205,14 @@ cmd.insert = function(interaction) {
 	return;
 }
 cmd.strike = function (interaction) {
+	index = interaction.options.getInteger('index') - 1;
 	if (affirm(index < PLAYLIST.length && index >= 0,"Failed: index out of bounds.",interaction)) return;
+	/*
+	if (index >= PLAYLIST.length || INDEX < 0) {
+		respond(interaction,"Failed, index out of bounds.");
+		return;
+	}
+	*/
 	song_removed = PLAYLIST[index];
 	PLAYLIST.splice(index,1);
 	respond(interaction,"Removed "+song_removed+" from playlist.");
@@ -274,7 +288,6 @@ try {
 	if (!interaction.isCommand()) return; // Watch out. 
 	// Is this deprecated? 
 	
-	//console.log(interaction.member.roles.cache.some(r => r.name === "Penguins"));
 	if (REQUIRE_ROLE_TO_USE && !interactions.member.roles.cache.some(r => r.name === BOT_USERS)){
 		respond(interaction,"You must have the "+BOT_USERS+" role to use the bot.");
 		return;
@@ -286,7 +299,12 @@ try {
 		await cmd[commandName](interaction);
 	}
 	catch (error) {
-		console.error("The expected error.");
+		try {
+			respond(interaction,"Unknown error.");
+		}
+		finally {
+			console.error("The expected error.");
+		}
 	}
 
 	// if commandName === 'halt'  // Good name; for something. 
@@ -317,8 +335,8 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
 		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
 		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
-		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('song').setDescription('The song appended.').setRequired(true)),
-		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('song').setDescription('The song prepended.').setRequired(true)),
+		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song appended.').setRequired(true)),
+		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song prepended.').setRequired(true)),
 		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
 		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
 		new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
@@ -326,7 +344,7 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('loop').setDescription('Played songs are immediately appended to the end of the playlist.'),
 		new SlashCommandBuilder().setName('keep').setDescription('Continually plays the current song.'),
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
-		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('song').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
+		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('url').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
 		new SlashCommandBuilder().setName('strike').setDescription('Removes song at index.').addIntegerOption(opt=>opt.setName('index').setDescription('The index of the song to be removed.').setRequired(true)),
 		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
 		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
@@ -392,6 +410,8 @@ function play_front() {
 		song = null;
 		try {
 			song = ytdl(PLAYLIST[0]);
+			CURRENTLY_PLAYING = PLAYLIST[0];
+			// Should be safe to assign a global string like this since CURRENTLY_PLAYING must be a YouTube video. 
 		}
 		catch (e) {
 			// None of this actually executes; why is that? 
@@ -407,10 +427,6 @@ function play_front() {
 			PLAYLIST.shift(); // <<===
 		}
 		resource = createAudioResource(song, {inlineVolume: true});
-
-			// !!! 
-			CURRENTLY_PLAYING = PLAYLIST[0]; // WATCH OUT: VARIABLE'S GLOBAL.  
-			// SHOULD BE FINE SINCE IN ORDER TO GET HERE, MUST BE A YOUTUBE VIDEO. 
 
 		HISTORY.unshift(CURRENTLY_PLAYING);
 		if (HISTORY.length > MAX_HISTORY_SIZE)
@@ -433,6 +449,7 @@ function affirm(conditional, error_msg, interaction){ // Bullying the macroless 
 	if (conditional)
 		return false;
 	console.log("Affirm failed.");
+	respond(interaction,error_msg);
 	return true;
 //	if (!conditional)
 //		interaction.reply(error_msg);
@@ -462,6 +479,7 @@ function respond(interaction,msg) {
 
 client.login(token);
 
+// TODO: Fix the critical v14 bug! 
 // TODO: Play from timestamp! 
 // TODO: Affirm commands by voice. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
