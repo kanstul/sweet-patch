@@ -129,7 +129,7 @@ cmd.join = async function(interaction) {
 	}
 }
 cmd.what = function(interaction) {
-	return "Currently playing is: "+PLAYLIST[0];
+	return "Currently playing is: "+CURRENTLY_PLAYING;
 }
 cmd.set = function(interaction) {
 	if (REQUIRE_ROLE_FOR_VOLUME && !interaction.member.roles.cache.some(r => r.name === VOLUME_USERS)) {
@@ -140,15 +140,48 @@ cmd.set = function(interaction) {
 	response = response.concat('now \`'+VOLUME+'\`.');
 	return response;
 }
+cmd.push = function(interaction) {
+	console.log('Malarkey!');
+	cmd.accrue(interaction.options.getString('url'),PLAYLIST.length);
+	/*
+	let previous_playlist_length = PLAYLIST.length;
+
+	if (PLAYLIST.length >= MAX_PLAYLIST_SIZE)
+		return "Couldn't add, playlist full.";
+	songs = remove_non_URL_characters(interaction.options.getString('url')).split(" ");
+	for (song of songs) if (PLAYLIST.length <= MAX_PLAYLIST_SIZE) // !!! 
+		PLAYLIST.push(song);
+	if (!PLAYING && AUTO_PLAY && previous_playlist_length === 0) 
+		play_front();
+	*/
+	return "Appended "+PLAYLIST[PLAYLIST.length-1]+".";
+}
+cmd.jump = function(interaction) {
+	let previous_playlist_length = PLAYLIST.length;
+
+	if (PLAYLIST.length >= MAX_PLAYLIST_SIZE)
+		return "Couldn't add, playlist full.";
+	songs = remove_non_URL_characters(interaction.options.getString('url')).split(" ");
+	for (let i=songs.length-1;i>=0;--i)
+	{
+		if (PLAYLIST.length >= MAX_PLAYLIST_SIZE)
+			PLAYLIST.pop();
+		PLAYLIST.unshift(songs[i]);
+	}
+	let hack = PLAYLIST[0];
+	if (!PLAYING && AUTO_PLAY && previous_playlist_length === 0)
+		play_front();
+	return "Prepended "+hack+".";
+}
 cmd.damp = function(interaction) {
 	response = 'Damp was \`'+DAMP+'\`, is '
 	DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
 	// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
 	return response.concat('now \`'+DAMP+'\`.');
 }
-cmd.history = async function(interaction) {
+cmd.history = function(interaction) {
 	response = [];
-	await list(response,HISTORY);
+	list(response,HISTORY);
 	//response = list([],HISTORY); // Seriously, why?  // Fixthis.
 	return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "No songs have been played.";
 }
@@ -158,7 +191,7 @@ cmd.auto = function(interaction) {
 }
 cmd.next = function(interaction) {
 	play_front(); // Maybe I should just fold this into `skip`? 
-	return "Forcibly playing "+PLAYLIST[0]+'.';
+	return "Forcibly playing "+CURRENTLY_PLAYING+'.';
 }
 cmd.loop = function(interaction) {
 	LOOP = !LOOP;
@@ -176,13 +209,23 @@ cmd.help = function(interaction) {
 		response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
 	return '\`\`\`'+response.join('\n')+'\`\`\`';
 }
+cmd.insert = function(interaction) {
+	index = interaction.options.getInteger('index') - 1;
+	if (PLAYLIST.length >= MAX_PLAYLIST_SIZE || index < 0)
+		return "Index out of bounds.";
+	songs = remove_non_URL_characters(interaction.options.getString('url')).split(' ');
+	PLAYLIST.splice(index,0,...songs);
+//if (!PLAYING && AUTO_PLAY && PLAYLIST.length === 1) play_front(); Left out on purpose. 
+	// Wait, we left this out.  Why does it immediately start playing?  Weird bug. 
+	return "Inserted "+PLAYLIST[index+1]+'.';
+}
 cmd.strike = function (interaction) {
-	from = interaction.options.getInteger('from');
-	until = interaction.options.getInteger('until');
+	from = interaction.options.getInteger('from') - 1;
+	until = interaction.options.getInteger('until') - 1;
 	//if (until == undefined) until = from; // Fix later.
 	if (PLAYLIST.length >= MAX_PLAYLIST_SIZE || from < 0)
 		return "Index out of bounds.";
-	song_removed = PLAYLIST[from]+"`Note to self, have it return all songs deleted by examining the way history works. -- Programmer's note.`";
+	song_removed = PLAYLIST[from]+"`Note to self, have it return all songs deleted by examining the way history works. -- Progammer's note.`";
 	response = [];
 	list(response,PLAYLIST);
 	PLAYLIST.splice(from,(until - from) + 1);
@@ -196,30 +239,23 @@ cmd.fade = function(interaction) {
 cmd.pop = function(interaction) {
 	return "Removed "+PLAYLIST.pop()+" from playlist.";
 }
-cmd.insert = function(interaction) {
-	cmd.accrue(interaction.options.getString('url'),interactions.options.getInteger('index'));
-	return "HEY FIX THIS RETURN STATEMENT.";
-}
-cmd.push = function(interaction) {
-	cmd.accrue(interaction.options.getString('url'),PLAYLIST.length);
-	return "Appended "+PLAYLIST[PLAYLIST.length-1]+".";
-}
-cmd.jump = function(interaction) {
-	cmd.accrue(interaction.options.getString('url'),0);
-	return "Prepended "+PLAYLIST[0]+".";
-}
 cmd.play = function(interaction) {
+	if (PLAYING)
+		PLAYLIST.unshift(CURRENTLY_PLAYING)
 	//if (!connection) 
 		cmd.join(interaction);
 	PLAYING = false; 
 	cmd.jump(interaction);
-	return "Now playing "+PLAYLIST[0]+'.';
+	if (!PLAYING)
+		play_front();
+	return "Now playing "+CURRENTLY_PLAYING+'.';
 }
-// Make this function private. \/ 
-cmd.accrue = function(entry,index){
-	//console.log("Called accrue, playing is "+PLAYING+".");
-	songs = remove_non_URL_characters(entry).split(' ').slice(0,MAX_PLAYLIST_SIZE);
-	PLAYLIST.splice(index,0,...songs).slice(0,MAX_PLAYLIST_SIZE);
+/*private*/ cmd.accrue = function(entry,index){
+	console.log("Called accrue.");
+	songs = remove_non_URL_characters(entry).split(' ');
+	songs = songs.slice(0,MAX_PLAYLIST_SIZE); // ^^^
+	PLAYLIST.splice(index,0,...songs);
+	PLAYLIST = PLAYLIST.slice(0,MAX_PLAYLIST_SIZE); // ^^^
 	if (!PLAYING && AUTO_PLAY)
 		play_front();
 	return PLAYLIST[0] ?? "YAWNY";
@@ -307,28 +343,28 @@ function initialize_commands(initialize) {
 	// Never mind, this language is fucking rad.  You can cause shit to happen in wacky orders by exploiting { } in a function that's being called asynchronously.  That's COOL. 
 
 	const commands = [
-		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
-		new SlashCommandBuilder().setName('play').setDescription('\n==> Immediately joins the channel you\'re in and plays the given song.').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
-		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song appended.').setRequired(true)),
-		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song prepended.').setRequired(true)),
-		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('url').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
 		new SlashCommandBuilder().setName('list').setDescription('Lists playlist.'),
-		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
 		new SlashCommandBuilder().setName('skip').setDescription('Skips to the next song.'),
-		new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
 		new SlashCommandBuilder().setName('stop').setDescription('Pauses song.'),
 		new SlashCommandBuilder().setName('resume').setDescription('Resumes song.'),
-		new SlashCommandBuilder().setName('strike').setDescription('Removes songs from the first index given until the second.').addIntegerOption(opt=>opt.setName('from').setDescription('The index of the song to be removed.').setRequired(true)).addIntegerOption(opt=>opt.setName('until').setDescription('The index of the last song to be removed.').setRequired(true)),
-		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
-		new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
-		new SlashCommandBuilder().setName('loop').setDescription('Played songs are immediately appended to the end of the playlist.'),
-		new SlashCommandBuilder().setName('keep').setDescription('Continually plays the current song.'),
-		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
-		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
-		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
+		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
 		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
 		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
-		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
+		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
+		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song appended.').setRequired(true)),
+		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song prepended.').setRequired(true)),
+		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
+		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
+		new SlashCommandBuilder().setName('auto').setDescription('Toggles autoplay feature.'),
+		new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
+		new SlashCommandBuilder().setName('loop').setDescription('Played songs are immediately appended to the end of the playlist.'),
+		new SlashCommandBuilder().setName('keep').setDescription('Continually plays the current song.'),
+		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
+		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('url').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
+		new SlashCommandBuilder().setName('strike').setDescription('Removes songs from the first index given until the second.').addIntegerOption(opt=>opt.setName('from').setDescription('The index of the song to be removed.').setRequired(true)).addIntegerOption(opt=>opt.setName('until').setDescription('The index of the last song to be removed.').setRequired(true)),
+		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
+		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
+		new SlashCommandBuilder().setName('play').setDescription('\n==> Immediately joins the channel you\'re in and plays the given song.').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
 		//new SlashCommandBuilder().setname('test').setDescription('A test function, it should only be used by the developer.  REMOVE ME.')
 		// Use commas. 
 	]
@@ -356,6 +392,74 @@ function capitalize(string){
 		return string;
 	}
 	return string.charAt(0).toUpperCase().concat(string.slice(1));
+}
+
+
+player.on(AudioPlayerStatus.Idle, () => {
+	PLAYING = false;
+	play_front();
+	PLAYLIST.shift(); // This shouldn't work, but it is working.  What the fuck?  //INVESTIGATE.
+});
+
+//player.on(AudioPlayerStatus.Idle, play_front()); // <===  // Thisthing.
+
+async function list(response,list_given) {
+	for (let i=0;i<list_given.length;++i)
+	{
+		//console.error("In list,",i);
+		song = list_given[i];
+		try {
+			info = await ytdl.getInfo(song);
+			//response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
+			response.push("".concat(i+1,". [",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.'));
+		} catch (e) {
+			// This isn't tripping for some reason, I don't know why. 
+			// Because broken promises, investigate at a later date. 
+			console.error(e);
+			response.push('Invalid song.');
+		}
+	}
+	return response;
+}
+
+async function play_front() {
+	console.log('Play_front()');
+	if (PLAYLIST.length > 0) {
+		PLAYING = true;
+		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
+		let song = null;
+		try {
+			song = await PlayDL.stream(PLAYLIST[0]/*, {seek: HEY_FIX_ME}*/);
+			CURRENTLY_PLAYING = PLAYLIST[0];
+			// Should be safe to assign a global string like this since CURRENTLY_PLAYING must be a YouTube video. 
+		}
+		catch (e) {
+			// None of this actually executes; why is that? 
+			// Because broken promises, investigate at a later date. 
+			console.error(e);
+			console.log('Bonk.');
+		}
+		finally {
+			console.log('Finally!');
+			//PLAYLIST.shift(); // <<===
+		}
+		resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
+
+		HISTORY.unshift(CURRENTLY_PLAYING);
+		if (HISTORY.length > MAX_HISTORY_SIZE)
+			HISTORY.pop();
+
+		console.log("We just created an audio resource of "+song+".");
+		player.play(resource);
+
+		if (LOOP) // Could move this to the end and switch for CURRENTLY_PLAYING, might be better since it'll push out any invalid songs that way. 
+			PLAYLIST.push(CURRENTLY_PLAYING); // Not particularly significant either way. 
+		if (LOOP_FRONT)
+			PLAYLIST.unshift(CURRENTLY_PLAYING);
+	}
+	else
+		PLAYING = false; ///
+	//return CURRENTLY_PLAYING;
 }
 
 // Should this be `async-await`ish? 
@@ -388,89 +492,13 @@ function respond(interaction,msg) {
 	return;
 }
 
-
-player.on(AudioPlayerStatus.Idle, () => {
-	PLAYLIST.shift();
-	PLAYING = false;
-	play_front();
-});
-
-//player.on(AudioPlayerStatus.Idle, play_front()); // <===  // Thisthing.
-
-async function list(response,list_given) {
-	for (let i=0;i<list_given.length;++i)
-	{
-		//console.error("In list,",i);
-		song = list_given[i];
-		try {
-			info = await ytdl.getInfo(song);
-			//response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
-			response.push("".concat(i/*+1*/,". [",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.'));
-		} catch (e) {
-			// This isn't tripping for some reason, I don't know why. 
-			// Because broken promises, investigate at a later date. 
-			console.error(e);
-			response.push('Invalid song.');
-		}
-	}
-	return response;
-}
-
-async function play_front() {
-	console.log("HISTORY:");
-	console.log(HISTORY);
-	console.log('Play_front()');
-	if (PLAYLIST.length > 0) {
-		PLAYING = true;
-		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
-		let song = null;
-		try {
-			song = await PlayDL.stream(PLAYLIST[0]/*, {seek: HEY_FIX_ME}*/);
-		}
-		catch (e) {
-			// None of this actually executes; why is that? 
-			// Because broken promises, investigate at a later date. 
-			console.error(e);
-			console.log('Bonk.');
-		}
-		finally {
-			console.log('Finally!');
-			//PLAYLIST.shift(); // <<===
-		}
-		try {
-			resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
-		}
-		catch (e) {
-			console.error("NOT A VALID SONG, DOING SOME ODD THINGS TO MAKE IT WORK.");
-			PLAYLIST.shift();
-			play_front();
-			return;
-		}
-
-		HISTORY.unshift(PLAYLIST[0]);
-		if (HISTORY.length > MAX_HISTORY_SIZE)
-			HISTORY.pop();
-
-		//console.log("We just created an audio resource of "+song+".");
-		player.play(resource);
-
-		if (LOOP)
-			PLAYLIST.push(PLAYLIST[0]);
-		if (LOOP_FRONT)
-			PLAYLIST.unshift(PLAYLIST[0]);
-	}
-	else
-		PLAYING = false; ///
-	//return CURRENTLY_PLAYING;
-}
-
 client.login(token);
 
+// TODO: Clean up `accrue`.
+// TODO: CTRL+F "INVESTIGATE."
 // TODO: CTRL+F "HEY_FIX_ME".
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: CTRL+F "DOING SOME ODD THINGS TO MAKE IT WORK."
 // TODO: Fix the fact that `insert` can overload the playlist, make it safe like `jump` and `push` are. 
-// TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: Fix the critical v14 bug! 
@@ -479,9 +507,12 @@ client.login(token);
 // TODO: CTRL+F "YAWNY".
 // TODO: Affirm commands by voice. 
 // TODO: CTRL+F "REALLY MOVE". 
+// TODO: Re-order the list that the commands go in. 
+// TODO: Carefully consider whether or not we should switch the whole thing to zero indexing. 
 // TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
 // TODO: Clean up the file directory. 
 // TODO: CTRL+F "Find a better way to do this."
+// TODO: CTRL+F "Weird bug."
 // TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
 // TODO: CTRL+F "But why not?"
 // TODO: Implement `abscond`. 
@@ -497,12 +528,10 @@ client.login(token);
 // TODO: CTRL+F "Fixthis."
 
 //TEST: 
-// TEST: Re-order the list that the commands go in. 
 // TEST: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
 // TEST: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
 // TEST: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
 // TEST: Functions `loop` and `keep`! 
-// TEST: Clean up `accrue`.
 
 //DONE: 
 // DONE: Add a function to insert a song at a given index. 
@@ -514,6 +543,3 @@ client.login(token);
 // DONE: Make sure that LOOP and LOOP_FRONT can't both be set at the same time. 
 // DONE: Delete all songs BETWEEN TWO GIVEN NUMBERS. 
 // DONE: Fix CTRL+F "Dumbhack.". 
-// DONE: CTRL+F "Weird bug."
-// DONE?: Redo absolutely everything to use zero indexing. 
-// DONE: CTRL+F "INVESTIGATE."
