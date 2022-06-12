@@ -113,7 +113,6 @@ cmd.join = async function(interaction) {
 }
 
 async function join(guildId,channelId,adapterCreator) {
-	//connection = getVoiceConnection(interaction.guildId);
 	connection = getVoiceConnection(guildId);
 
 	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
@@ -145,7 +144,6 @@ async function join(guildId,channelId,adapterCreator) {
 		connection.receiver.speaking.on("end", (userId) => {
 			TALKING.delete(`${userId}`)
 		});
-							tts_FOLLOWME = true;
 		return (/*interaction,*/'Joined.'); // Howthehell?
 	} catch(error) {
 		console.warn(error); // Look into console.warn as compared to console.error. 
@@ -415,6 +413,7 @@ function respond(interaction,msg) {
 }
 
 function get_timestamp(url) {
+		//return parseInt((/t=(\d+)/.exec(url)??{0,0})[1]);
 	//console.log(parseInt(/t=(\d+)/.exec('https://youtu.be/8ptm5NuIthg?t=10')[1]));
 	try {
 		return parseInt(/t=(\d+)/.exec(url)[1]);
