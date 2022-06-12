@@ -190,7 +190,7 @@ cmd.strike = function (interaction) {
 }
 cmd.fade = function(interaction) {
 	response = 'Fade was \`'+FADE_TIME+'\`, is '
-	FADE_TIME = interaction.options.getInteger('fade');
+	FADE_TIME = Math.max(interaction.options.getInteger('fade'),ONE);
 	return response.concat('now \`'+FADE_TIME+'\`.');
 }
 cmd.pop = function(interaction) {
@@ -234,6 +234,8 @@ client.once('ready', ()=> {
 	console.log(argv);
 	COMMANDS = initialize_commands(!argv.includes('fast')); //! Use argc/argv here. 
 	console.log('Ready!');
+	console.log(get_timestamp('https://www.youtube.com/watch?v=LSCICFwlv8o'));
+	console.log(get_timestamp('https://youtu.be/LSCICFwlv8o?t=1'));
 	play_front(); // Why do we have this? 
 	let fade_time = FADE_TIME; // Should this be moved? // No, it doesn't have to be accessed anywhere but in this function. 
 const ONE = (SILLY_MODE)? MAX_VALUE : 1;
@@ -243,7 +245,7 @@ const ONE = (SILLY_MODE)? MAX_VALUE : 1;
 			fade_time = FADE_TIME;
 		}
 		else { // If people AREN'T talking. 
-			if (fade_time > 1)
+			if (fade_time > 0)
 				--fade_time; 
 			//console.log(fade_time);
 			let percentage = Math.min(((FADE_TIME - fade_time) / FADE_TIME) + DAMP, ONE);
@@ -308,7 +310,7 @@ function initialize_commands(initialize) {
 
 	const commands = [
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
-		new SlashCommandBuilder().setName('play').setDescription('\n==> Immediately joins the channel you\'re in and plays the given song.').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
+		new SlashCommandBuilder().setName('play').setDescription('==> Immediately joins the channel you\'re in and plays the given song.\n').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
 		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song appended.').setRequired(true)),
 		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song prepended.').setRequired(true)),
 		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('url').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
@@ -325,7 +327,7 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('keep').setDescription('Continually plays the current song.'),
 		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
 		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
-		new SlashCommandBuilder().setName('fade').setDescription('Sets the amount of time it takes to fade in.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
+		new SlashCommandBuilder().setName('fade').setDescription('==> Sets the amount of time it takes to fade in; set low to functionally disable.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
 		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
 		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
 		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
@@ -388,6 +390,17 @@ function respond(interaction,msg) {
 	return;
 }
 
+function get_timestamp(url) {
+	//console.log(parseInt(/t=(\d+)/.exec('https://youtu.be/8ptm5NuIthg?t=10')[1]));
+	try {
+		return parseInt(/t=(\d+)/.exec(url)[1]);
+	}
+	catch {
+		return 0;
+	}
+	// Thanks, `The Great Old One of Javascript`. 
+}
+
 
 player.on(AudioPlayerStatus.Idle, () => {
 	PLAYLIST.shift();
@@ -425,7 +438,7 @@ async function play_front() {
 		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
 		let song = null;
 		try {
-			song = await PlayDL.stream(PLAYLIST[0]/*, {seek: HEY_FIX_ME}*/);
+			song = await PlayDL.stream(PLAYLIST[0], {seek: get_timestamp(PLAYLIST[0])});
 		}
 		catch (e) {
 			// None of this actually executes; why is that? 
@@ -466,6 +479,7 @@ async function play_front() {
 
 client.login(token);
 
+// TODO: Implement YouTube search function. 
 // TODO: CTRL+F "HEY_FIX_ME".
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: CTRL+F "DOING SOME ODD THINGS TO MAKE IT WORK."
@@ -473,7 +487,7 @@ client.login(token);
 // TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
-// TODO: Fix the critical v14 bug! 
+// TODO: Fix the stupid try-catch block that's making `get_timestamp()` work. 
 // TODO: CTRL+F "Thisthing."
 // TODO: Play from timestamp! 
 // TODO: CTRL+F "YAWNY".
@@ -503,6 +517,10 @@ client.login(token);
 // TEST: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
 // TEST: Functions `loop` and `keep`! 
 // TEST: Clean up `accrue`.
+// TEST: Fix the critical v14 bug! 
+
+//NOTE:
+// NOTE: Weird things happen with a FADE_TIME of `0`, locked it to `ONE` with a Math.min. 
 
 //DONE: 
 // DONE: Add a function to insert a song at a given index. 
@@ -517,3 +535,4 @@ client.login(token);
 // DONE: CTRL+F "Weird bug."
 // DONE?: Redo absolutely everything to use zero indexing. 
 // DONE: CTRL+F "INVESTIGATE."
+
