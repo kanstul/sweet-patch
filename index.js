@@ -6,6 +6,7 @@ const PlayDL = require('play-dl');
 
 
 const player = createAudioPlayer();
+const tts_player = createAudioPlayer();
 const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
 let resource = createAudioResource(test, {inlineVolume: true});
 
@@ -18,8 +19,18 @@ const client = new Client({
 	],
 });
 
+const tts_client = new Client({ 
+	intents: [
+		Intents.FLAGS.GUILDS,
+		Intents.FLAGS.GUILD_MEMBERS,
+		Intents.FLAGS.GUILD_VOICE_STATES,
+	],
+});
+
+
 // Variables and such. 
 const { token } = require('./config.json');
+const { tts_token } = require('./config.json');
 var TALKING = new Set(); 
 var PLAYLIST = [];
 var HISTORY = [];
@@ -54,14 +65,14 @@ const {
 
 cmd = new Object;
 
-/*
 const DiscordTTS = require("discord-tts");
 cmd.test = function(interaction) {
-	const stream = DiscordTTS.getVoiceSTream("Hello, text to speech world!");
+	const stream = DiscordTTS.getVoiceStream(interaction.options.getString('thisisjustfortesting'));
 	const audioResource = createAudioResource(stream, {inlineVolume: true});
 	player.play(audioResource);
+	return "Called the test function.";
 }
-*/
+
 cmd.list = async function(interaction) {
 	console.log(PLAYLIST);
 	response = [];
@@ -97,19 +108,31 @@ cmd.join = async function(interaction) {
 		return;
 	} // Some other time. 
 	*/
+	//return /*await*/ join(interaction);
+	return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
+}
 
-	connection = getVoiceConnection(interaction.guildId);
+async function join(guildId,channelId,adapterCreator) {
+	//connection = getVoiceConnection(interaction.guildId);
+	connection = getVoiceConnection(guildId);
 
 	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
 		/*var */connection = joinVoiceChannel({
-			channelId: interaction.member.voice.channelId,
-			guildId: interaction.guildId,
-			adapterCreator: interaction.guild.voiceAdapterCreator,
+			channelId: channelId,
+			//channelId: interaction.member.voice.channelId,
+			//channelId: client.guilds.cache.get("860726754184527882").members.cache.get("230526630035062784").voice.channelId,
+			guildId: guildId,
+			//guildId: interaction.guildId,
+			//guildId: "860726754184527882",
+			adapterCreator: adapterCreator,
+			//adapterCreator: interaction.guild.voiceAdapterCreator,
+			//adapterCreator: client.guilds.cache.get("860726754184527882").voiceAdapterCreator,
 			selfDeaf: false,
 			selfMute: false,
 		});
 		connection.subscribe(player); // <== 
 	}
+
 	try {
 		await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
 		// if ID == bot ID then return, or something. 
@@ -122,10 +145,11 @@ cmd.join = async function(interaction) {
 		connection.receiver.speaking.on("end", (userId) => {
 			TALKING.delete(`${userId}`)
 		});
-		return (interaction,'Joined.');
+							tts_FOLLOWME = true;
+		return (/*interaction,*/'Joined.'); // Howthehell?
 	} catch(error) {
 		console.warn(error); // Look into console.warn as compared to console.error. 
-		return (interaction,'Error in join function.');
+		return (/*interaction,*/'Error in join function.'); // Howthehell?
 	}
 }
 cmd.what = function(interaction) {
@@ -331,7 +355,7 @@ function initialize_commands(initialize) {
 		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
 		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
 		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
-		//new SlashCommandBuilder().setname('test').setDescription('A test function, it should only be used by the developer.  REMOVE ME.')
+		new SlashCommandBuilder().setName('test').setDescription('A test function, it should only be used by the developer.  REMOVE ME.').addStringOption(opt=>opt.setName('thisisjustfortesting').setDescription('Test.').setRequired(true)),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -343,7 +367,7 @@ function initialize_commands(initialize) {
 		const { REST } = require('@discordjs/rest');
 		const { Routes } = require('discord-api-types/v9');
 		const { clientId, guildId, token } = require('./config.json');
-		const rest = new REST({ version: '9' }).setToken(token);
+		const rest = new REST({version: '9' }).setToken(token);
 		rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
 			.then(() => console.log('Registration complete.'))
 			.catch(console.error);
@@ -479,6 +503,60 @@ async function play_front() {
 
 client.login(token);
 
+//const { clientId, guildId } = require('./config.json');
+//const SweetPatch = client.guilds.cache.get(guildId)//.members.cache.get(clientId);
+tts_client.login(tts_token);
+tts_client.once('ready', ()=> {
+	console.log('Amai, online!');
+
+	setInterval( async () => { 
+	},1);
+});
+
+tts_client.on('interactionCreate', async interaction => {
+	const { commandName } = interaction;
+	//interaction.applicationId = "983714302978568192" // Didn't work. 
+	respond(interaction,"Application ID is "+interaction.applicationId);
+	cmd.join(interaction);
+	console.log("Type of ID is "+(typeof interaction.applicationId));
+});
+	
+/*
+	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
+		connection = joinVoiceChannel({
+			//channelId: interaction.member.voice.channelId,
+			channelId: client.guilds.cache.get("860726754184527882").members.cache.get("230526630035062784").voice.channelId,
+			//guildId: interaction.guildId,
+			guildId: "860726754184527882",
+			//adapterCreator: interaction.guild.voiceAdapterCreator,
+			adapterCreator: client.guilds.cache.get("860726754184527882").voiceAdapterCreator,
+			selfDeaf: false,
+			selfMute: false,
+		});
+		connection.subscribe(player); // <== 
+	}
+*/
+/*
+	const { SlashCommandBuilder } = require('@discordjs/builders');
+
+	const commands = [
+		new SlashCommandBuilder().setName('amai').setDescription('A test function.'),
+	]
+		.map(command => command.toJSON());
+	if (false) 
+	{
+		const { REST } = require('@discordjs/rest');
+		const { Routes } = require('discord-api-types/v9');
+		const { tts_clientId, guildId, tts_token } = require('./config.json');
+		const rest = new REST({version: '9' }).setToken(tts_token);
+		rest.put(Routes.applicationGuildCommands(tts_clientId, guildId), { body: commands })
+			.then(() => console.log('Amai registered.'))
+			.catch(console.error);
+	}
+*/
+
+// TODO: Affirm commands by voice. 
+// TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
 // TODO: Implement YouTube search function. 
 // TODO: CTRL+F "HEY_FIX_ME".
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -491,7 +569,6 @@ client.login(token);
 // TODO: CTRL+F "Thisthing."
 // TODO: Play from timestamp! 
 // TODO: CTRL+F "YAWNY".
-// TODO: Affirm commands by voice. 
 // TODO: CTRL+F "REALLY MOVE". 
 // TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
 // TODO: Clean up the file directory. 
@@ -509,6 +586,7 @@ client.login(token);
 // TODO: CTRL+F "Fix later." 
 // TODO: Add a function to remove videos by URL/title/whatever. 
 // TODO: CTRL+F "Fixthis."
+// TODO: CTRL+F "Howthehell?"
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 
