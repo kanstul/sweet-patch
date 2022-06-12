@@ -1,9 +1,7 @@
 const { Client, Intents } = require('discord.js')
 const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-//const { token } = require('./config.json');
 const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
-
 
 const player = createAudioPlayer();
 const tts_player = createAudioPlayer();
@@ -27,6 +25,7 @@ const tts_client = new Client({
 	],
 });
 
+//const Cmd = require('./commands.js')
 
 // Variables and such. 
 const { token } = require('./config.json');
@@ -109,10 +108,16 @@ cmd.join = async function(interaction) {
 	} // Some other time. 
 	*/
 	//return /*await*/ join(interaction);
-	return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
+	//return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
+	return join(interaction);
 }
 
-async function join(guildId,channelId,adapterCreator) {
+//async function join(guildId,channelId,adapterCreator) {
+async function join(interaction) {
+	guildId = interaction.guildId;
+	channelId = interaction.member.voice.channelId;
+	adapterCreator = interaction.guild.voiceAdapterCreator;
+
 	connection = getVoiceConnection(guildId);
 
 	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
@@ -512,6 +517,10 @@ tts_client.once('ready', ()=> {
 	},1);
 });
 
+client.on('messageCreate', async msg => {
+	console.log("A message was sent!");
+});
+
 tts_client.on('interactionCreate', async interaction => {
 	const { commandName } = interaction;
 	//interaction.applicationId = "983714302978568192" // Didn't work. 
@@ -586,6 +595,7 @@ tts_client.on('interactionCreate', async interaction => {
 // TODO: Add a function to remove videos by URL/title/whatever. 
 // TODO: CTRL+F "Fixthis."
 // TODO: CTRL+F "Howthehell?"
+// TODO: Put commands in separate file. 
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 
