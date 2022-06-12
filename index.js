@@ -98,30 +98,20 @@ cmd.resume = function(interaction) {
 	return (interaction,'Resumed.'); 
 }
 cmd.join = async function(interaction) {
-	/*
-	var user_connection = getVoiceConnection(interaction.guildId)
-	console.log(user_connection);
-	//console.log("In join, "+connection+".");
-	if (user_connection == undefined) {
-		interaction.reply("You are not in a voice channel.");
-		return;
-	} // Some other time. 
-	*/
-	//return /*await*/ join(interaction);
 	//return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
-	return join(interaction);
 }
 
-//async function join(guildId,channelId,adapterCreator) {
-async function join(interaction) {
-	guildId = interaction.guildId;
-	channelId = interaction.member.voice.channelId;
-	adapterCreator = interaction.guild.voiceAdapterCreator;
+async function join(guildId,channelId,adapterCreator) {
+//async function join(interaction) {
+	//guildId = interaction.guildId;
+	//channelId = interaction.member.voice.channelId;
+	//adapterCreator = interaction.guild.voiceAdapterCreator;
 
 	connection = getVoiceConnection(guildId);
+	//connection = getVoiceConnection(interaction.guildId);
 
 	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
-		/*var */connection = joinVoiceChannel({
+		var connection = joinVoiceChannel({
 			channelId: channelId,
 			//channelId: interaction.member.voice.channelId,
 			//channelId: client.guilds.cache.get("860726754184527882").members.cache.get("230526630035062784").voice.channelId,
@@ -149,12 +139,13 @@ async function join(interaction) {
 		connection.receiver.speaking.on("end", (userId) => {
 			TALKING.delete(`${userId}`)
 		});
-		return (/*interaction,*/'Joined.'); // Howthehell?
+		return ('Joined.');
 	} catch(error) {
 		console.warn(error); // Look into console.warn as compared to console.error. 
-		return (/*interaction,*/'Error in join function.'); // Howthehell?
+		return ('Error in join function.');
 	}
 }
+
 cmd.what = function(interaction) {
 	return "Currently playing is: "+PLAYLIST[0];
 }
@@ -517,9 +508,11 @@ tts_client.once('ready', ()=> {
 	},1);
 });
 
+/*
 client.on('messageCreate', async msg => {
 	console.log("A message was sent!");
 });
+*/
 
 tts_client.on('interactionCreate', async interaction => {
 	const { commandName } = interaction;
@@ -528,40 +521,6 @@ tts_client.on('interactionCreate', async interaction => {
 	cmd.join(interaction);
 	console.log("Type of ID is "+(typeof interaction.applicationId));
 });
-	
-/*
-	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
-		connection = joinVoiceChannel({
-			//channelId: interaction.member.voice.channelId,
-			channelId: client.guilds.cache.get("860726754184527882").members.cache.get("230526630035062784").voice.channelId,
-			//guildId: interaction.guildId,
-			guildId: "860726754184527882",
-			//adapterCreator: interaction.guild.voiceAdapterCreator,
-			adapterCreator: client.guilds.cache.get("860726754184527882").voiceAdapterCreator,
-			selfDeaf: false,
-			selfMute: false,
-		});
-		connection.subscribe(player); // <== 
-	}
-*/
-/*
-	const { SlashCommandBuilder } = require('@discordjs/builders');
-
-	const commands = [
-		new SlashCommandBuilder().setName('amai').setDescription('A test function.'),
-	]
-		.map(command => command.toJSON());
-	if (false) 
-	{
-		const { REST } = require('@discordjs/rest');
-		const { Routes } = require('discord-api-types/v9');
-		const { tts_clientId, guildId, tts_token } = require('./config.json');
-		const rest = new REST({version: '9' }).setToken(tts_token);
-		rest.put(Routes.applicationGuildCommands(tts_clientId, guildId), { body: commands })
-			.then(() => console.log('Amai registered.'))
-			.catch(console.error);
-	}
-*/
 
 // TODO: Affirm commands by voice. 
 // TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
@@ -594,8 +553,8 @@ tts_client.on('interactionCreate', async interaction => {
 // TODO: CTRL+F "Fix later." 
 // TODO: Add a function to remove videos by URL/title/whatever. 
 // TODO: CTRL+F "Fixthis."
-// TODO: CTRL+F "Howthehell?"
 // TODO: Put commands in separate file. 
+// TODO: Have `join` throw an error message if the user isn't in a voice channel. 
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 
