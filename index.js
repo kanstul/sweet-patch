@@ -63,7 +63,6 @@ const {
 // Variables and such. 
 
 cmd = new Object;
-
 const DiscordTTS = require("discord-tts");
 cmd.test = function(interaction) {
 	const stream = DiscordTTS.getVoiceStream(interaction.options.getString('thisisjustfortesting'));
@@ -98,7 +97,7 @@ cmd.resume = function(interaction) {
 	return (interaction,'Resumed.'); 
 }
 cmd.join = async function(interaction) {
-	//return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
+	return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
 }
 
 async function join(guildId,channelId,adapterCreator) {
@@ -282,6 +281,7 @@ function kick() {
 	player.play(resource);
 } // Don't think that we still need this. 
 
+
 client.on('interactionCreate', async interaction => {
 try {
 	if (!interaction.isCommand()) return; // Watch out. 
@@ -409,14 +409,7 @@ function respond(interaction,msg) {
 }
 
 function get_timestamp(url) {
-		//return parseInt((/t=(\d+)/.exec(url)??{0,0})[1]);
-	//console.log(parseInt(/t=(\d+)/.exec('https://youtu.be/8ptm5NuIthg?t=10')[1]));
-	try {
-		return parseInt(/t=(\d+)/.exec(url)[1]);
-	}
-	catch {
-		return 0;
-	}
+	return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
 	// Thanks, `The Great Old One of Javascript`. 
 }
 
@@ -436,7 +429,6 @@ async function list(response,list_given) {
 		song = list_given[i];
 		try {
 			info = await ytdl.getInfo(song);
-			//response.push("".concat(i+1,". ",info.videoDetails.title,"\t[",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]"));
 			response.push("".concat(i/*+1*/,". [",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.'));
 		} catch (e) {
 			// This isn't tripping for some reason, I don't know why. 
@@ -449,8 +441,6 @@ async function list(response,list_given) {
 }
 
 async function play_front() {
-	console.log("HISTORY:");
-	console.log(HISTORY);
 	console.log('Play_front()');
 	if (PLAYLIST.length > 0) {
 		PLAYING = true;
@@ -465,10 +455,10 @@ async function play_front() {
 			console.error(e);
 			console.log('Bonk.');
 		}
-		finally {
-			console.log('Finally!');
-			//PLAYLIST.shift(); // <<===
-		}
+		//finally {
+		//	console.log('Finally!');
+		//	//PLAYLIST.shift(); // <<===
+		//}
 		try {
 			resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
 		}
@@ -508,77 +498,12 @@ tts_client.once('ready', ()=> {
 	},1);
 });
 
-/*
-client.on('messageCreate', async msg => {
-	console.log("A message was sent!");
-});
-*/
-
 tts_client.on('interactionCreate', async interaction => {
+	//respond(interaction,'Disabled.');
+	//return;
 	const { commandName } = interaction;
 	//interaction.applicationId = "983714302978568192" // Didn't work. 
 	respond(interaction,"Application ID is "+interaction.applicationId);
 	cmd.join(interaction);
 	console.log("Type of ID is "+(typeof interaction.applicationId));
 });
-
-// TODO: Affirm commands by voice. 
-// TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
-// TODO: Implement YouTube search function. 
-// TODO: CTRL+F "HEY_FIX_ME".
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: CTRL+F "DOING SOME ODD THINGS TO MAKE IT WORK."
-// TODO: Fix the fact that `insert` can overload the playlist, make it safe like `jump` and `push` are. 
-// TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
-// TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
-// TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
-// TODO: Fix the stupid try-catch block that's making `get_timestamp()` work. 
-// TODO: CTRL+F "Thisthing."
-// TODO: Play from timestamp! 
-// TODO: CTRL+F "YAWNY".
-// TODO: CTRL+F "REALLY MOVE". 
-// TODO: Consider adding "CURRENTLY_PLAYING" to the `list` command. 
-// TODO: Clean up the file directory. 
-// TODO: CTRL+F "Find a better way to do this."
-// TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
-// TODO: CTRL+F "But why not?"
-// TODO: Implement `abscond`. 
-// TODO: Have `interaction.reply` by voice. 
-// TODO: Make `remove_non_URL_characters` better. 
-// TODO: CTRL+F "TAGYOUIT."
-// TODO: Consider what global variables should be `const` and assign them appropriately. 
-// TODO: Fix that damnable `async` nonsense that's going on in the `cmd.list` function! 
-// TODO: Pick some more careful names for the `argv`s. 
-// TODO: CTRL+F "Some other time."
-// TODO: CTRL+F "Fix later." 
-// TODO: Add a function to remove videos by URL/title/whatever. 
-// TODO: CTRL+F "Fixthis."
-// TODO: Put commands in separate file. 
-// TODO: Have `join` throw an error message if the user isn't in a voice channel. 
-
-//TEST: 
-// TEST: Re-order the list that the commands go in. 
-// TEST: Add functionality such that only users with a certain role can operate the bot, or at least the volume. 
-// TEST: Fix bug where if you enter commands too fast, particularly `list`, it just crashes and dies. 
-// TEST: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
-// TEST: Functions `loop` and `keep`! 
-// TEST: Clean up `accrue`.
-// TEST: Fix the critical v14 bug! 
-
-//NOTE:
-// NOTE: Weird things happen with a FADE_TIME of `0`, locked it to `ONE` with a Math.min. 
-
-//DONE: 
-// DONE: Add a function to insert a song at a given index. 
-// DONE: Add a function that deletes a song given an index.  (Not hard; have headache.) 
-// DONE: Add multiple songs with a single command. 
-// DONE?: CTRL+F "syzygy" !!!!
-// DONE: Add a function to delete the last song.  (What to name it?) 
-// DONE: Overload the `play` function! 
-// DONE: Make sure that LOOP and LOOP_FRONT can't both be set at the same time. 
-// DONE: Delete all songs BETWEEN TWO GIVEN NUMBERS. 
-// DONE: Fix CTRL+F "Dumbhack.". 
-// DONE: CTRL+F "Weird bug."
-// DONE?: Redo absolutely everything to use zero indexing. 
-// DONE: CTRL+F "INVESTIGATE."
-
