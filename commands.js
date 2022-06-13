@@ -4,7 +4,7 @@ const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChan
 const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
 
-const { capitalize, remove_non_URL_characters, respond, get_timestamp } = require('./utility.js')
+const { initialize_commands, capitalize, remove_non_URL_characters, respond, get_timestamp } = require('./utility.js')
 
 //!const this.player = createAudioPlayer();
 const tts_player = createAudioPlayer();
@@ -21,13 +21,14 @@ class CMD {
 		/*const*/ SILLY_MODE = false;
 		/*const*/ ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
 		/*const*/ ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
+		/*const*/ ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
+
 	// Variables and such. 
 	TALKING = new Set(); 
 	PLAYLIST = [];
 	HISTORY = [];
-	    PLAYING = false; // Find a better way to do  
+	    PLAYING = false; // Find a better way to do this. 
 	COMMANDS = []; // This can REALLY be known at compile time. 
-	//CURRENTLY_PLAYING = "Nothing played yet.";
 	connection = null;
 		LOOP = false;
 		LOOP_FRONT = false; 
@@ -43,8 +44,6 @@ class CMD {
 		player = null;
 		resource = null;
 
-/*const*/ ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
-
 		BOT_USERS = "everyone";
 		REQUIRE_ROLE_FOR_VOLUME = false;
 		VOLUME_USERS = "everyone";
@@ -52,8 +51,9 @@ class CMD {
 
 	constructor(settings,player){ // <===
 		this.player = player;
-		this.resource = createAudioResource(test, {inlineVolume: true});
+		  this.resource = createAudioResource(test, {inlineVolume: true});
 		console.log("Constructor called.");
+		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
 	}
 
@@ -72,15 +72,15 @@ class CMD {
 	skip(interaction) {
 		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and this.AUTO_PLAY. 
 		this.player.stop();
-		return (interaction,'Skipping.');
+		return ('Skipping.');
 	}
 	stop(interaction) {
 		this.player.pause();
-		return (interaction,'Paused.');
+		return ('Paused.');
 	}
 	resume(interaction) {
 		this.player.unpause(); // Use && and fit into a single line instead? 
-		return (interaction,'Resumed.'); 
+		return ('Resumed.'); 
 	}
 	async join(interaction) {
 		return this.JOIN(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
@@ -119,11 +119,11 @@ class CMD {
 			// Don't know why but not going to look a gift horse in the mouth for the moment. 
 			// Should look into it at a future date though. 
 			this.connection.receiver.speaking.on("start", (userId) => {
-				console.log("Someone started talking.")
+				//console.log("Someone started talking.")
 				this.TALKING.add(`${userId}`)
 			});
 			this.connection.receiver.speaking.on("end", (userId) => {
-				console.log("Someone stopped talking.")
+				//console.log("Someone stopped talking.")
 				this.TALKING.delete(`${userId}`)
 			});
 			return ('Joined.');
@@ -175,17 +175,24 @@ class CMD {
 			response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
 		return '\`\`\`'+response.join('\n')+'\`\`\`';
 	}
-	strike (interaction) {
-		from = interaction.options.getInteger('from');
-		until = interaction.options.getInteger('until');
+	async strike(interaction) {
+		let from = interaction.options.getInteger('from');
+		let until = interaction.options.getInteger('until');
 		//if (until == undefined) until = from; // Fix later.
-		if (this.PLAYLIST.length >= this.MAX_PLAYLIST_SIZE || from < 0)
+		if (until >= this.PLAYLIST.length || from < 0)
 			return "Index out of bounds.";
+		if (until < from)
+			return ("Indices backwards, no change.");
+		let response = await this.LIST(this.PLAYLIST.slice(from,until+1),from);
+		this.PLAYLIST.splice(from,(until - from) + 1);
+		return '\`\`\`'+response.join('\n')+'\`\`\`'
+		/*
 		song_removed = this.PLAYLIST[from]+"`Note to self, have it return all songs deleted by examining the way history works. -- Programmer's note.`";
 		let response = [];
 		this.LIST(this.PLAYLIST); // <=== //?
 		this.PLAYLIST.splice(from,(until - from) + 1);
 		return "Removed "+song_removed+" from playlist.";
+		*/
 	}
 	fade(interaction) {
 		let response = 'Fade was \`'+this.FADE_TIME+'\`, is '
@@ -226,7 +233,6 @@ class CMD {
 			this.play_front();
 		return this.PLAYLIST[0] ?? "YAWNY";
 	}
-		// if commandName === 'halt'  // Good name; for something. 
 
 	async history(interaction) {
 		let response = await this.LIST(this.HISTORY);
@@ -236,19 +242,18 @@ class CMD {
 		let response = await this.LIST(this.PLAYLIST);
 		return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
 	}
-	async LIST(list_given) {
+	async LIST(list_given,HACK) {
 		let response = [];
-		//for (let i=0;i<list_given.length;++i)
+		HACK = HACK ?? 0;
 		for (let i in list_given)
 		{
-			//console.error("In list,",i);
 			let song = list_given[i];
 			console.log("Song is "+song+'.');
 			try {
 				let info = await ytdl.getInfo(song);
 				let timestamp = get_timestamp(song);
 				timestamp = (timestamp > 0? "".concat(new Date(timestamp).toISOString().substring(11,19),"]->[") : "")
-				response.push("".concat(i,". [",timestamp,new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.')); 
+				response.push("".concat((Number(i)+HACK),". [",timestamp,new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.')); 
 			} catch (e) {
 				// This isn't tripping for some reason, I don't know why. 
 				// Because broken promises, investigate at a later date. 
@@ -274,17 +279,10 @@ class CMD {
 				console.error(e);
 				console.log('Bonk.');
 			}
-			//finally {
-			//	console.log('Finally!');
-			//	//this.PLAYLIST.shift(); // <<===
-			//}
 			try {
 				this.resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
 			}
 			catch (e) {
-				//console.error("NOT A VALID SONG, DOING SOME ODD THINGS TO MAKE IT WORK.");
-				//this.PLAYLIST.shift();
-				//this.play_front();
 				cycle();
 				return;
 			}
@@ -314,7 +312,7 @@ class CMD {
 	}
 	raiseVolume(fade_time){
 		let percentage = Math.min(((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP, this.ONE);
-		console.log(percentage * this.VOLUME);
+		//console.log(percentage * this.VOLUME);
 		this.resource.volume.setVolume(percentage * this.VOLUME);
 	}
 }
