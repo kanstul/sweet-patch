@@ -31,17 +31,25 @@ client.once('ready', ()=> {
 	console.log('Ready!');
 	//!play_front(); // Why do we have this? 
 		let fade_time = Cmd.FADE_TIME;
+		const TALK_TIME = 200;//800;
+		let talk_time = TALK_TIME;
 	setInterval( () => {
 		if (Cmd.TALKING.size > 0) {
-			Cmd.dropVolume();
-			fade_time = Cmd.FADE_TIME;
+			if (talk_time < 1){
+				Cmd.dropVolume();
+				fade_time = Cmd.FADE_TIME;
+			}
+			else
+				--talk_time;
 			//console.log("Someone's talking!")
 		}
 		else {
+			talk_time = TALK_TIME;
 			if (fade_time > 0)
 				--fade_time; 
 			Cmd.raiseVolume(fade_time);
 		}
+		console.log(talk_time)
 	},1);
 
 });

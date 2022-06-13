@@ -8,6 +8,7 @@
 // TODO: Implement YouTube search function. 
 // TODO: CTRL+F "HEY_FIX_ME".
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: Make `TALK_TIME` linear and implement it more thoroughly. 
 // TODO: CTRL+F "DOING SOME ODD THINGS TO MAKE IT WORK."
 // TODO: Fix the fact that `insert` can overload the playlist, make it safe like `jump` and `push` are. 
 // TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
