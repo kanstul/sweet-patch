@@ -3,6 +3,8 @@ const {tts_token, clientId} = require('./safe.json');
 const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice'); // Comment this out later. 
 const {respond} = require('./utility.js');
 
+const DiscordTTS = require('discord-tts');
+
 const tts_player = createAudioPlayer();
 const tts_client = new Client({ 
 	intents: [
@@ -25,16 +27,25 @@ tts_client.on('interactionCreate', async interaction => {
 tts_client.on('messageCreate', async msg => {
 	//console.log("Amai perceived a message, it said `"+msg.content+"`, and its author's ID was `"+msg.author.id+"`.");
 	//console.log("We were looking for `"+clientId+"`.");
-	if (msg.author.id == clientId && msg.content == "Joined.") {
+	if (msg.content == "FORCE FOLLOW." || (msg.author.id == clientId && msg.content == "Joined.")) {
 		//msg.channel.send("Hey.");
 		let connection = getVoiceConnection(msg.guildId);
 		connection = joinVoiceChannel({
 			channelId: msg.member.voice.channelId,
 			guildId: msg.guildId,
 			adapterCreator: msg.guild.voiceAdapterCreator,
-			selfDeaf: true,
+			selfDeaf: false,
 			selfMute: false,
 		});
 		connection.subscribe(tts_player);
 	}
+	console.log(enunciate(msg.content));
 });
+
+function enunciate(string){
+	console.log("Called enunciate with `"+string+"`.");
+	const stream = DiscordTTS.getVoiceStream("Hey there.");
+	const audioResource = createAudioResource(stream, {inlineVolume: true});
+	tts_player.play(audioResource);
+	return "Enunciated."
+}

@@ -15,20 +15,10 @@ const client = new Client({
 	],
 });
 
-const tts_client = new Client({ 
-	intents: [
-		Intents.FLAGS.GUILDS,
-		Intents.FLAGS.GUILD_MEMBERS,
-		Intents.FLAGS.GUILD_VOICE_STATES,
-		Intents.FLAGS.GUILD_MESSAGES
-	],
-});
-
 // Program starts here. 
 // ====================
 
 const {token} = require('./safe.json');
-const {tts_token} = require('./safe.json');
 
 const config_settings = require('./config.json');
 const commands = require('./commands.js')

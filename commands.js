@@ -60,14 +60,12 @@ class CMD {
 	//=====
 	/*const */DiscordTTS = require("discord-tts");
 	test(interaction) {
-		interaction.channel.send("Hey there!");
-		return "Test function was called.";
-		/*
-		const stream = DiscordTTS.getVoiceStream(interaction);//interaction.options.getString('thisisjustfortesting'));
+		//interaction.channel.send("Hey there!");
+		//return "Test function was called.";
+		const stream = DiscordTTS.getVoiceStream(interaction.options.getString('thisisjustfortesting'));
 		const audioResource = createAudioResource(stream, {inlineVolume: true});
 		this.player.play(audioResource);
 		return "Called the test function.";
-		*/
 	}
 	//=====
 
