@@ -27,229 +27,17 @@ const tts_client = new Client({
 
 //import {Cmd} from './commands.js';
 
-// Variables and such. 
-const { token } = require('./config.json');
-const { tts_token } = require('./config.json');
-var TALKING = new Set(); 
-var PLAYLIST = [];
-var HISTORY = [];
-	var PLAYING = false; // Find a better way to do this. 
-var COMMANDS = []; // This can REALLY be known at compile time. 
-var CURRENTLY_PLAYING = "Nothing played yet.";
-var connection = null;
-
-// Variables and such. 
-let { // `yawny`. 
-	LOOP = false,
-	LOOP_FRONT = false, 
-	VOLUME = 1.0,
-	AUTO_PLAY = true,
-	DAMP = 0.1,
-	MAX_HISTORY_SIZE = 100,
-	MAX_PLAYLIST_SIZE = 50,
-	LOCK_TO_CHANNEL_ONCE_JOINED = false,
-	FADE_TIME = 5000,
-	REQUIRE_ROLE_TO_USE = false,
-	BOT_USERS = "everyone",
-	REQUIRE_ROLE_FOR_VOLUME = false,
-	VOLUME_USERS = "everyone"
-} = require('./config.json');
-
-const {
-	SILLY_MODE = false,
-	ABSOLUTE_MAX_HISTORY_SIZE = 1000, // Math.min this, somehow. 
-	ABSOLUTE_MAX_PLAYLIST_SIZE = 255
-} = require('./config.json');
-// Variables and such. 
-
-cmd = new Object;
-const DiscordTTS = require("discord-tts");
-cmd.test = function(interaction) {
-	const stream = DiscordTTS.getVoiceStream(interaction.options.getString('thisisjustfortesting'));
-	const audioResource = createAudioResource(stream, {inlineVolume: true});
-	player.play(audioResource);
-	return "Called the test function.";
-}
-
-cmd.list = async function(interaction) {
-	console.log(PLAYLIST);
-	response = [];
-	await list(response,PLAYLIST);
-	//response = list([],PLAYLIST); // But why not? 
-
-	return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
-}
-cmd.kick = function(interaction) {
-	kick();
-	return ('\`*Rattle*\`');
-}
-cmd.skip = function(interaction) {
-	// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and AUTO_PLAY. 
-	player.stop();
-	return (interaction,'Skipping.');
-}
-cmd.stop = function(interaction) {
-	player.pause();
-	return (interaction,'Paused.');
-}
-cmd.resume = function(interaction) {
-	player.unpause(); // Use && and fit into a single line instead? 
-	return (interaction,'Resumed.'); 
-}
-cmd.join = async function(interaction) {
-	return join(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
-}
-
-async function join(guildId,channelId,adapterCreator) {
-//async function join(interaction) {
-	//guildId = interaction.guildId;
-	//channelId = interaction.member.voice.channelId;
-	//adapterCreator = interaction.guild.voiceAdapterCreator;
-
-	connection = getVoiceConnection(guildId);
-	//connection = getVoiceConnection(interaction.guildId);
-
-	if (!LOCK_TO_CHANNEL_ONCE_JOINED || !connection) {
-		var connection = joinVoiceChannel({
-			channelId: channelId,
-			//channelId: interaction.member.voice.channelId,
-			//channelId: client.guilds.cache.get("860726754184527882").members.cache.get("230526630035062784").voice.channelId,
-			guildId: guildId,
-			//guildId: interaction.guildId,
-			//guildId: "860726754184527882",
-			adapterCreator: adapterCreator,
-			//adapterCreator: interaction.guild.voiceAdapterCreator,
-			//adapterCreator: client.guilds.cache.get("860726754184527882").voiceAdapterCreator,
-			selfDeaf: false,
-			selfMute: false,
-		});
-		connection.subscribe(player); // <== 
-	}
-
-	try {
-		await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
-		// if ID == bot ID then return, or something. 
-		// Ended up not being necessary, bot doesn't register when it starts TALKING. 
-		// Don't know why but not going to look a gift horse in the mouth for the moment. 
-		// Should look into it at a future date though. 
-		connection.receiver.speaking.on("start", (userId) => {
-			TALKING.add(`${userId}`)
-		});
-		connection.receiver.speaking.on("end", (userId) => {
-			TALKING.delete(`${userId}`)
-		});
-		return ('Joined.');
-	} catch(error) {
-		console.warn(error); // Look into console.warn as compared to console.error. 
-		return ('Error in join function.');
-	}
-}
-
-cmd.what = function(interaction) {
-	return "Currently playing is: "+PLAYLIST[0];
-}
-cmd.set = function(interaction) {
-	if (REQUIRE_ROLE_FOR_VOLUME && !interaction.member.roles.cache.some(r => r.name === VOLUME_USERS)) {
-		return "You must have the "+VOLUME_USERS+" role to adjust the volume.  It is currently "+VOLUME+'.';
-	}
-	response = 'Volume was \`'+VOLUME+'\`, is '
-	VOLUME = interaction.options.getNumber('level') / 10.0;
-	response = response.concat('now \`'+VOLUME+'\`.');
-	return response;
-}
-cmd.damp = function(interaction) {
-	response = 'Damp was \`'+DAMP+'\`, is '
-	DAMP = interaction.options.getNumber('damp') / 100.0; // Is 100 appropriate? 
-	// Could use DAMP = Math.max(DAMP, interaction.opt..., but this is more fun! 
-	return response.concat('now \`'+DAMP+'\`.');
-}
-cmd.history = async function(interaction) {
-	response = [];
-	await list(response,HISTORY);
-	//response = list([],HISTORY); // Seriously, why?  // Fixthis.
-	return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "No songs have been played.";
-}
-cmd.auto = function(interaction) {
-	AUTO_PLAY = !AUTO_PLAY;
-	return "Auto-play is now "+(AUTO_PLAY?"on.":"off."); // The ternary operator isn't professional; just for fun. 
-}
-cmd.next = function(interaction) {
-	play_front(); // Maybe I should just fold this into `skip`? 
-	return "Forcibly playing "+PLAYLIST[0]+'.';
-}
-cmd.loop = function(interaction) {
-	LOOP = !LOOP;
-	if (LOOP) LOOP_FRONT = false;
-	return "Will "+(LOOP?"now":"not")+" loop playlist.";
-}
-cmd.keep = function(interaction) {
-	LOOP_FRONT = !LOOP_FRONT;
-	if (LOOP_FRONT) LOOP = false;
-	return "Will "+(LOOP_FRONT?"now":"not")+" loop first song.";
-}
-cmd.help = function(interaction) {
-	response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
-	for (const command of COMMANDS)
-		response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
-	return '\`\`\`'+response.join('\n')+'\`\`\`';
-}
-cmd.strike = function (interaction) {
-	from = interaction.options.getInteger('from');
-	until = interaction.options.getInteger('until');
-	//if (until == undefined) until = from; // Fix later.
-	if (PLAYLIST.length >= MAX_PLAYLIST_SIZE || from < 0)
-		return "Index out of bounds.";
-	song_removed = PLAYLIST[from]+"`Note to self, have it return all songs deleted by examining the way history works. -- Programmer's note.`";
-	response = [];
-	list(response,PLAYLIST);
-	PLAYLIST.splice(from,(until - from) + 1);
-	return "Removed "+song_removed+" from playlist.";
-}
-cmd.fade = function(interaction) {
-	response = 'Fade was \`'+FADE_TIME+'\`, is '
-	FADE_TIME = Math.max(interaction.options.getInteger('fade'),ONE);
-	return response.concat('now \`'+FADE_TIME+'\`.');
-}
-cmd.pop = function(interaction) {
-	return "Removed "+PLAYLIST.pop()+" from playlist.";
-}
-cmd.insert = function(interaction) {
-	cmd.accrue(interaction.options.getString('url'),interactions.options.getInteger('index'));
-	return "HEY FIX THIS RETURN STATEMENT.";
-}
-cmd.push = function(interaction) {
-	cmd.accrue(interaction.options.getString('url'),PLAYLIST.length);
-	return "Appended "+PLAYLIST[PLAYLIST.length-1]+".";
-}
-cmd.jump = function(interaction) {
-	cmd.accrue(interaction.options.getString('url'),0);
-	return "Prepended "+PLAYLIST[0]+".";
-}
-cmd.play = function(interaction) {
-	//if (!connection) 
-		cmd.join(interaction);
-	PLAYING = false; 
-	cmd.jump(interaction);
-	return "Now playing "+PLAYLIST[0]+'.';
-}
-// Make this function private. \/ 
-cmd.accrue = function(entry,index){
-	//console.log("Called accrue, playing is "+PLAYING+".");
-	songs = remove_non_URL_characters(entry).split(' ').slice(0,MAX_PLAYLIST_SIZE);
-	PLAYLIST.splice(index,0,...songs).slice(0,MAX_PLAYLIST_SIZE);
-	if (!PLAYING && AUTO_PLAY)
-		play_front();
-	return PLAYLIST[0] ?? "YAWNY";
-}
-	// if commandName === 'halt'  // Good name; for something. 
-
+//cmd = new Object;
 // Program starts here. 
 // ====================
 
+const {token} = require('./config.json');
+const {tts_token} = require('./config.json');
+
 const config_settings = require('./config.json');
 const CMD = require('./commands.js')
+Cmd = new CMD(config_settings,player);
 client.once('ready', ()=> {
-	Cmd = new CMD(config_settings);
 	//Cmd['test']();
 	let argv = process.argv; // Should this be global? 
 	console.log(argv);
@@ -257,22 +45,21 @@ client.once('ready', ()=> {
 	console.log('Ready!');
 	console.log(get_timestamp('https://www.youtube.com/watch?v=LSCICFwlv8o'));
 	console.log(get_timestamp('https://youtu.be/LSCICFwlv8o?t=1'));
-	play_front(); // Why do we have this? 
-	let fade_time = FADE_TIME; // Should this be moved? // No, it doesn't have to be accessed anywhere but in this function. 
-const ONE = (SILLY_MODE)? MAX_VALUE : 1;
-	setInterval( () => { // <== "While true, check every millisecond." 
-		if (TALKING.size > 0) { // If people are talking. 
-			resource.volume.setVolume(DAMP*VOLUME); // Set the volume to DAMP * VOLUME. 
-			fade_time = FADE_TIME;
+	//!play_front(); // Why do we have this? 
+		let fade_time = Cmd.FADE_TIME;
+	setInterval( () => {
+		if (Cmd.TALKING.size > 0) {
+			Cmd.dropVolume();
+			fade_time = Cmd.FADE_TIME;
+			//console.log("Someone's talking!")
 		}
-		else { // If people AREN'T talking. 
+		else {
 			if (fade_time > 0)
 				--fade_time; 
-			//console.log(fade_time);
-			let percentage = Math.min(((FADE_TIME - fade_time) / FADE_TIME) + DAMP, ONE);
-			resource.volume.setVolume(percentage * VOLUME);
+			Cmd.raiseVolume(fade_time);
 		}
 	},1);
+
 });
 
 function sigmoid (input) { // !!! 
@@ -282,7 +69,7 @@ function sigmoid (input) { // !!!
 
 function kick() {
 	resource = createAudioResource(test, {inlineVolume: true});
-	player.play(resource);
+	//!player.play(resource);
 } // Don't think that we still need this. 
 
 
@@ -291,7 +78,7 @@ try {
 	if (!interaction.isCommand()) return; // Watch out. 
 	// Is this deprecated? 
 	
-	if (REQUIRE_ROLE_TO_USE && !interaction.member.roles.cache.some(r => r.name === BOT_USERS)){
+	if (Cmd.REQUIRE_ROLE_TO_USE && !interaction.member.roles.cache.some(r => r.name === Cmd.BOT_USERS)){
 		respond(interaction,"You must have the "+BOT_USERS+" role to use the bot.");
 		return;
 	}
@@ -299,7 +86,7 @@ try {
 	const { commandName } = interaction;
 	
 	try {
-		answer = await cmd[commandName](interaction);
+		answer = await Cmd[commandName](interaction);
 		console.log(answer);
 		interaction.reply(answer);
 	}
@@ -418,77 +205,11 @@ function get_timestamp(url) {
 }
 
 
-player.on(AudioPlayerStatus.Idle, () => {
-	PLAYLIST.shift();
-	PLAYING = false;
-	play_front();
-});
-
 //player.on(AudioPlayerStatus.Idle, play_front()); // <===  // Thisthing.
 
-async function list(response,list_given) {
-	for (let i=0;i<list_given.length;++i)
-	{
-		//console.error("In list,",i);
-		song = list_given[i];
-		try {
-			info = await ytdl.getInfo(song);
-			response.push("".concat(i/*+1*/,". [",new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.'));
-		} catch (e) {
-			// This isn't tripping for some reason, I don't know why. 
-			// Because broken promises, investigate at a later date. 
-			console.error(e);
-			response.push('Invalid song.');
-		}
-	}
-	return response;
-}
-
-async function play_front() {
-	console.log('Play_front()');
-	if (PLAYLIST.length > 0) {
-		PLAYING = true;
-		console.log("Playlist[0] is: "+PLAYLIST[0]+".");
-		let song = null;
-		try {
-			song = await PlayDL.stream(PLAYLIST[0], {seek: get_timestamp(PLAYLIST[0])});
-		}
-		catch (e) {
-			// None of this actually executes; why is that? 
-			// Because broken promises, investigate at a later date. 
-			console.error(e);
-			console.log('Bonk.');
-		}
-		//finally {
-		//	console.log('Finally!');
-		//	//PLAYLIST.shift(); // <<===
-		//}
-		try {
-			resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
-		}
-		catch (e) {
-			console.error("NOT A VALID SONG, DOING SOME ODD THINGS TO MAKE IT WORK.");
-			PLAYLIST.shift();
-			play_front();
-			return;
-		}
-
-		HISTORY.unshift(PLAYLIST[0]);
-		if (HISTORY.length > MAX_HISTORY_SIZE)
-			HISTORY.pop();
-
-		//console.log("We just created an audio resource of "+song+".");
-		player.play(resource);
-
-		if (LOOP)
-			PLAYLIST.push(PLAYLIST[0]);
-		if (LOOP_FRONT)
-			PLAYLIST.unshift(PLAYLIST[0]);
-	}
-	else
-		PLAYING = false; ///
-	//return CURRENTLY_PLAYING;
-}
+player.on(AudioPlayerStatus.Idle, () => {
+	Cmd.cycle();
+});
 
 client.login(token);
 
