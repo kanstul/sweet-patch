@@ -49,7 +49,11 @@ client.once('ready', ()=> {
 				--fade_time; 
 			Cmd.raiseVolume(fade_time);
 		}
-		console.log(talk_time)
+		//!!!
+		//console.log(talk_time)
+		//!!!
+		//!!!
+		//!!!
 	},1);
 
 });

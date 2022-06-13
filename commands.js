@@ -3,6 +3,7 @@ const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChan
 //const { token } = require('./config.json');
 const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
+const yts = require("yt-search");
 
 const { initialize_commands, capitalize, remove_non_URL_characters, respond, get_timestamp } = require('./utility.js')
 
@@ -55,6 +56,20 @@ class CMD {
 		console.log("Constructor called.");
 		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
+	}
+
+	async search(interaction) {
+		const {videos} = await yts(interaction.options.getString('query'));
+		if (videos.length === 0)
+			return "No videos found."
+		else
+		{
+			//interaction.content = videos[0];
+			//return this.jump();
+			this.join(interaction);
+			this.PLAYLIST.unshift(videos[0].url);
+			return this.next(interaction);
+		}
 	}
 
 	//=====
@@ -279,6 +294,7 @@ class CMD {
 			console.log("Playlist[0] is: "+this.PLAYLIST[0]+".");
 			let song = null;
 			try {
+				console.log("Timestamp is "+get_timestamp(this.PLAYLIST[0])+'.');
 				song = await PlayDL.stream(this.PLAYLIST[0], {seek: get_timestamp(this.PLAYLIST[0])});
 			}
 			catch (e) {
@@ -291,7 +307,7 @@ class CMD {
 				this.resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
 			}
 			catch (e) {
-				cycle();
+				this.cycle();
 				return;
 			}
 
@@ -302,15 +318,15 @@ class CMD {
 			//console.log("We just created an audio resource of "+song+".");
 			this.player.play(this.resource);
 
-			if (this.LOOP)
-				this.PLAYLIST.push(this.PLAYLIST[0]);
-			if (this.LOOP_FRONT)
-				this.PLAYLIST.unshift(this.PLAYLIST[0]);
 		}
 		else
 			this.PLAYING = false; ///
 	}
 	cycle(){
+		if (this.LOOP)
+			this.PLAYLIST.push(this.PLAYLIST[0]);
+		else if (this.LOOP_FRONT)
+			this.PLAYLIST.unshift(this.PLAYLIST[0]);
 		this.PLAYLIST.shift();
 		this.PLAYING = false;
 		this.play_front();

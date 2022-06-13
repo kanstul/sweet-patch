@@ -32,6 +32,7 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
 		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
 		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
+		new SlashCommandBuilder().setName('search').setDescription('Searches for a YouTube video and plays the first result.').addStringOption(opt=>opt.setName('query').setDescription('The search terms used.').setRequired(true)),
 		new SlashCommandBuilder().setName('test').setDescription('A test function, it should only be used by the developer.  REMOVE ME.').addStringOption(opt=>opt.setName('thisisjustfortesting').setDescription('Test.').setRequired(true)),
 		// Use commas. 
 	]
