@@ -57,13 +57,19 @@ class CMD {
 		Object.assign(this,settings);
 	}
 
-//!	const DiscordTTS = require("discord-tts");
-//!	test(interaction) {
-//!		const stream = DiscordTTS.getVoiceStream(interaction.options.getString('thisisjustfortesting'));
-//!		const audioResource = createAudioResource(stream, {inlineVolume: true});
-//!		this.player.play(audioResource);
-//!		return "Called the test function.";
-//!	}
+	//=====
+	/*const */DiscordTTS = require("discord-tts");
+	test(interaction) {
+		interaction.channel.send("Hey there!");
+		return "Test function was called.";
+		/*
+		const stream = DiscordTTS.getVoiceStream(interaction);//interaction.options.getString('thisisjustfortesting'));
+		const audioResource = createAudioResource(stream, {inlineVolume: true});
+		this.player.play(audioResource);
+		return "Called the test function.";
+		*/
+	}
+	//=====
 
 	kick(interaction) { // Delete this? 
 		resource = createAudioResource(test, {inlineVolume: true});

@@ -4,7 +4,6 @@ const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
 
 const player = createAudioPlayer();
-const tts_player = createAudioPlayer();
 
 const {initialize_commands,respond} = require('./utility.js');
 
@@ -21,6 +20,7 @@ const tts_client = new Client({
 		Intents.FLAGS.GUILDS,
 		Intents.FLAGS.GUILD_MEMBERS,
 		Intents.FLAGS.GUILD_VOICE_STATES,
+		Intents.FLAGS.GUILD_MESSAGES
 	],
 });
 
@@ -100,23 +100,3 @@ player.on(AudioPlayerStatus.Idle, () => {
 });
 
 client.login(token);
-
-//const { clientId, guildId } = require('./config.json');
-//const SweetPatch = client.guilds.cache.get(guildId)//.members.cache.get(clientId);
-tts_client.login(tts_token);
-tts_client.once('ready', ()=> {
-	console.log('Amai, online!');
-
-	setInterval( async () => { 
-	},1);
-});
-
-tts_client.on('interactionCreate', async interaction => {
-	//respond(interaction,'Disabled.');
-	//return;
-	const { commandName } = interaction;
-	//interaction.applicationId = "983714302978568192" // Didn't work. 
-	//respond(interaction,"Application ID is "+interaction.applicationId);
-	Cmd.join(interaction);
-	//console.log("Type of ID is "+(typeof interaction.applicationId));
-});
