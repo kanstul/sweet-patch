@@ -25,6 +25,7 @@ const tts_client = new Client({
 	],
 });
 
+const Cmd = require('./commands.js')
 //import {Cmd} from './commands.js';
 
 // Variables and such. 
@@ -246,12 +247,7 @@ cmd.accrue = function(entry,index){
 // Program starts here. 
 // ====================
 
-const Cmd = require('./commands.js')
 client.once('ready', ()=> {
-	Cmd['dell']();
-	Cmd['dell']();
-	Cmd['dell']();
-	Cmd['dell']();
 	let argv = process.argv; // Should this be global? 
 	console.log(argv);
 	COMMANDS = initialize_commands(!argv.includes('fast')); //! Use argc/argv here. 
