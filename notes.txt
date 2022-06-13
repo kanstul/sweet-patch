@@ -1,3 +1,4 @@
+// TODO: Add delete interactions feature. 
 // TODO: Have `interaction.reply` by voice. 
 // TODO: Affirm commands by voice. 
 // TODO: Rename `stop` to `pause`. 
