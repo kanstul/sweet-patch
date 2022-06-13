@@ -1,3 +1,4 @@
+// TODO: Make SILLY_MODE and all the rest `const` in `commands.js`, somehow. 
 // TODO: Affirm commands by voice. 
 // TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
 // TODO: Implement YouTube search function. 

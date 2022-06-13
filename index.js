@@ -246,12 +246,11 @@ cmd.accrue = function(entry,index){
 // Program starts here. 
 // ====================
 
-const Cmd = require('./commands.js')
+const config_settings = require('./config.json');
+const CMD = require('./commands.js')
 client.once('ready', ()=> {
-	Cmd['dell']();
-	Cmd['dell']();
-	Cmd['dell']();
-	Cmd['dell']();
+	Cmd = new CMD(config_settings);
+	//Cmd['test']();
 	let argv = process.argv; // Should this be global? 
 	console.log(argv);
 	COMMANDS = initialize_commands(!argv.includes('fast')); //! Use argc/argv here. 
