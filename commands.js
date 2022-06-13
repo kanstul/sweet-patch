@@ -14,7 +14,7 @@ const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal
 // Variables and such. 
 const DiscordTTS = require("discord-tts");
 
-const config_settings = require('./config.json');
+//const config_settings = require('./config.json');
 
 
 class CMD {
@@ -65,8 +65,9 @@ class CMD {
 //!		return "Called the test function.";
 //!	}
 
-	kick(interaction) {
-		kick();
+	kick(interaction) { // Delete this? 
+		resource = createAudioResource(test, {inlineVolume: true});
+		player.play(resource);
 		return ('\`*Rattle*\`');
 	}
 	skip(interaction) {

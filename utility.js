@@ -43,7 +43,7 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 	{
 		const { REST } = require('@discordjs/rest');
 		const { Routes } = require('discord-api-types/v9');
-		const { clientId, guildId, token } = require('./config.json');
+		const { clientId, guildId, token } = require('./safe.json');
 		const rest = new REST({version: '9' }).setToken(token);
 		rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
 			.then(() => console.log('Registration complete.'))

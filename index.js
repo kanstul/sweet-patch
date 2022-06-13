@@ -1,12 +1,10 @@
 const { Client, Intents } = require('discord.js')
-const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice'); // Comment this out later. 
 const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
 
 const player = createAudioPlayer();
 const tts_player = createAudioPlayer();
-const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal5Kw3Fc';
-let resource = createAudioResource(test, {inlineVolume: true});
 
 const {initialize_commands,respond} = require('./utility.js');
 
@@ -26,18 +24,15 @@ const tts_client = new Client({
 	],
 });
 
-//import {Cmd} from './commands.js';
-
-//cmd = new Object;
 // Program starts here. 
 // ====================
 
-const {token} = require('./config.json');
-const {tts_token} = require('./config.json');
+const {token} = require('./safe.json');
+const {tts_token} = require('./safe.json');
 
 const config_settings = require('./config.json');
-const CMD = require('./commands.js')
-Cmd = new CMD(config_settings,player);
+const commands = require('./commands.js')
+Cmd = new commands(config_settings,player);
 client.once('ready', ()=> {
 	//Cmd['test']();
 	let argv = process.argv; // Should this be global? 
@@ -64,13 +59,6 @@ client.once('ready', ()=> {
 function sigmoid (input) { // !!! 
 	1 / (1 + 2.7182)
 }
-
-
-function kick() {
-	resource = createAudioResource(test, {inlineVolume: true});
-	//!player.play(resource);
-} // Don't think that we still need this. 
-
 
 client.on('interactionCreate', async interaction => {
 try {
@@ -104,7 +92,8 @@ try {
 	console.error("Error in command function.");
 	}
 });
-//player.on(AudioPlayerStatus.Idle, play_front()); // <===  // Thisthing.
+
+//player.on(AudioPlayerStatus.Idle, Cmd.cycle()); // <===  // Thisthing.
 
 player.on(AudioPlayerStatus.Idle, () => {
 	Cmd.cycle();
@@ -127,7 +116,7 @@ tts_client.on('interactionCreate', async interaction => {
 	//return;
 	const { commandName } = interaction;
 	//interaction.applicationId = "983714302978568192" // Didn't work. 
-	respond(interaction,"Application ID is "+interaction.applicationId);
-	cmd.join(interaction);
-	console.log("Type of ID is "+(typeof interaction.applicationId));
+	//respond(interaction,"Application ID is "+interaction.applicationId);
+	Cmd.join(interaction);
+	//console.log("Type of ID is "+(typeof interaction.applicationId));
 });
