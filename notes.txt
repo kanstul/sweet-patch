@@ -1,17 +1,17 @@
 // TODO: Make it `just-work` when you feed it a playlist. 
-// TODO: Add functionality to delete commands.
+// TODO: Add functionality to delete commands. \/\/.
 // TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
 // TODO: Rename `stop` to `pause`. 
 // TODO: Make sure that `play` isn't fucking things up, test it good. 
 // TODO: Make SILLY_MODE and all the rest `const` in `commands.js`, somehow. 
 // TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
+// TODO: Stop passing `player` in the constructor and just initialize it therein instead. 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: Make `TALK_TIME` linear and implement it more thoroughly. 
 // TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "Thisthing."
-// TODO: CTRL+F "YAWNY".
 // TODO: CTRL+F "Find a better way to do this."
 // TODO: Call `TALK_TIME` `debouncer` instead? 
 // TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
@@ -24,6 +24,8 @@
 // TODO: Add a function to remove videos by URL/title/whatever. 
 // TODO: Have `join` throw an error message if the user isn't in a voice channel. 
 // TODO: You know, `halt` would be a good name for something.  We should use that. 
+// TODO: Rename `abscond` to `leave`? 
+// TODO: Make `LOG` betterer. 
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 

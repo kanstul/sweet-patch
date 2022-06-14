@@ -13,5 +13,6 @@
 	"REQUIRE_ROLE_TO_USE": false,
 	"BOT_USERS": "admin",
 	"REQUIRE_ROLE_FOR_VOLUME": false,
-	"VOLUME_USERS": "moderator"
+	"VOLUME_USERS": "moderator",
+	"RENAME_FADE": 10
 }

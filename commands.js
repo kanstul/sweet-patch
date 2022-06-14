@@ -5,7 +5,7 @@ const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
 const yts = require("yt-search");
 
-const { initialize_commands, capitalize, remove_non_URL_characters, respond, get_timestamp } = require('./utility.js')
+const { initialize_commands, capitalize, remove_non_URL_characters, respond, get_timestamp, array_to_msg } = require('./utility.js')
 
 //!const this.player = createAudioPlayer();
 const tts_player = createAudioPlayer();
@@ -48,6 +48,7 @@ class CMD {
 		BOT_USERS = "everyone";
 		REQUIRE_ROLE_FOR_VOLUME = false;
 		VOLUME_USERS = "everyone";
+		RENAME_FADE = 10;
 
 
 	constructor(settings,player){ // <===
@@ -72,8 +73,12 @@ class CMD {
 		}
 	}
 
-	//=====
-	/*const */DiscordTTS = require("discord-tts");
+	test(interaction) {
+		return "Called the test function.";
+	}
+
+	/*=====
+	const DiscordTTS = require("discord-tts");
 	test(interaction) {
 		//interaction.channel.send("Hey there!");
 		//return "Test function was called.";
@@ -85,7 +90,7 @@ class CMD {
 		this.player.play(audioResource);
 		return "Called the test function.";
 	}
-	//=====
+	*///=====
 
 	kick(interaction) { // Delete this? 
 		resource = createAudioResource(test, {inlineVolume: true});
@@ -105,30 +110,24 @@ class CMD {
 		this.player.unpause(); // Use && and fit into a single line instead? 
 		return ('Resumed.'); 
 	}
+	/*
 	async join(interaction) {
 		return this.JOIN(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
 	}
+	*/
 
-	async JOIN(guildId,channelId,adapterCreator) {
-	//async function join(interaction) {
-		//guildId = interaction.guildId;
-		//channelId = interaction.member.voice.channelId;
-		//adapterCreator = interaction.guild.voiceAdapterCreator;
+	async JOIN(interaction) {
+		guildId = interaction.guildId;
+		channelId = interaction.member.voice.channelId;
+		adapterCreator = interaction.guild.voiceAdapterCreator;
 
 		this.connection = getVoiceConnection(guildId);
-		//this.connection = getVoiceConnection(interaction.guildId);
 
 		if (!this.LOCK_TO_CHANNEL_ONCE_JOINED || !this.connection) {
 			this.connection = joinVoiceChannel({
 				channelId: channelId,
-				//channelId: interaction.member.voice.channelId,
-				//channelId: client.guilds.cache.get("860726754184527882").members.cache.get("230526630035062784").voice.channelId,
 				guildId: guildId,
-				//guildId: interaction.guildId,
-				//guildId: "860726754184527882",
 				adapterCreator: adapterCreator,
-				//adapterCreator: interaction.guild.voiceAdapterCreator,
-				//adapterCreator: client.guilds.cache.get("860726754184527882").voiceAdapterCreator,
 				selfDeaf: false,
 				selfMute: false,
 			});
@@ -157,7 +156,7 @@ class CMD {
 	}
 
 	what(interaction) {
-		return "Currently playing is: "+this.PLAYLIST[0];
+		return "Currently playing is: "+this.PLAYLIST[0]+'.';
 	}
 	set(interaction) {
 		if (this.REQUIRE_ROLE_FOR_VOLUME && !interaction.member.roles.cache.some(r => r.name === this.VOLUME_USERS)) {
@@ -165,8 +164,7 @@ class CMD {
 		}
 		let response = 'Volume was \`'+this.VOLUME+'\`, is '
 		this.VOLUME = interaction.options.getNumber('level') / 10.0;
-		response = response.concat('now \`'+this.VOLUME+'\`.');
-		return response;
+		return response.concat('now \`'+this.VOLUME+'\`.');
 	}
 	damp(interaction) {
 		let response = 'Damp was \`'+this.DAMP+'\`, is '
@@ -208,14 +206,8 @@ class CMD {
 			return ("Indices backwards, no change.");
 		let response = await this.LIST(this.PLAYLIST.slice(from,until+1),from);
 		this.PLAYLIST.splice(from,(until - from) + 1);
-		return '\`\`\`'+response.join('\n')+'\`\`\`'
-		/*
-		song_removed = this.PLAYLIST[from]+"`Note to self, have it return all songs deleted by examining the way history works. -- Programmer's note.`";
-		let response = [];
-		this.LIST(this.PLAYLIST); // <=== //?
-		this.PLAYLIST.splice(from,(until - from) + 1);
-		return "Removed "+song_removed+" from playlist.";
-		*/
+		//return '\`\`\`'+response.join('\n')+'\`\`\`'
+		return array_to_msg(response);
 	}
 	fade(interaction) {
 		let response = 'Fade was \`'+this.FADE_TIME+'\`, is '
@@ -225,17 +217,19 @@ class CMD {
 	pop(interaction) {
 		return "Removed "+this.PLAYLIST.pop()+" from playlist.";
 	}
-	insert(interaction) {
-		this.accrue(interaction.options.getString('url'),interactions.options.getInteger('index'));
-		return "HEY FIX THIS RETURN STATEMENT.";
+	async insert(interaction) {
+		let index = interaction.options.getInteger('index');
+		let len = this.accrue(interaction.options.getString('url'),index);
+		let response = await(this.LIST(this.PLAYLIST.slice(index,index+len),index));
+		return array_to_msg(response);
 	}
 	push(interaction) {
 		this.accrue(interaction.options.getString('url'),this.PLAYLIST.length);
-		return "Appended "+this.PLAYLIST[this.PLAYLIST.length-1]+".";
+		return "Appended "+this.PLAYLIST[this.PLAYLIST.length-1]+'.';
 	}
 	jump(interaction) {
 		this.accrue(interaction.options.getString('url'),0);
-		return "Prepended "+this.PLAYLIST[0]+".";
+		return "Prepended "+this.PLAYLIST[0]+'.';
 	}
 	play(interaction) {
 		//if (!this.connection) 
@@ -244,19 +238,14 @@ class CMD {
 		this.jump(interaction);
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}
-	// Make this function private. \/ 
-	accrue(entry,index){
-		//console.log("Called accrue, playing is "+this.PLAYING+".");
-		console.log(entry);
-		console.log(remove_non_URL_characters(entry).split(' ').slice(0,100));
-		console.log(remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE));
+	#accrue(entry,index){
 		let songs = remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE);
 		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
 		if (!this.PLAYING && this.AUTO_PLAY)
 			this.play_front();
-		return this.PLAYLIST[0] ?? "YAWNY";
+		//return this.PLAYLIST[0] ?? "YAWNY";
+		return Number(songs.length); // Is this really the best way to get insert working? 
 	}
-
 	async history(interaction) {
 		let response = await this.LIST(this.HISTORY);
 		return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "No songs have been played.";
@@ -287,7 +276,7 @@ class CMD {
 		return response;
 	}
 
-	async play_front() {
+	async play_front() { // Rename to `next`? 
 		console.log('Play_front()');
 		if (this.PLAYLIST.length > 0) {
 			this.PLAYING = true;
@@ -331,13 +320,17 @@ class CMD {
 		this.PLAYING = false;
 		this.play_front();
 	}
-	dropVolume(){
-		this.resource.volume.setVolume(this.DAMP*this.VOLUME); // Set the volume to this.DAMP * this.VOLUME. 
-	}
-	raiseVolume(fade_time){
-		let percentage = Math.min(((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP, this.ONE);
+//	dropVolume(){
+//		this.resource.volume.setVolume(this.DAMP*this.VOLUME); // Set the volume to this.DAMP * this.VOLUME. 
+//	}
+	setVolume(fade_time){
+		let percentage = Math.min((((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP), this.ONE);
 		//console.log(percentage * this.VOLUME);
 		this.resource.volume.setVolume(percentage * this.VOLUME);
+	}
+	abscond(interaction){
+		this.connection.destroy();
+		return "Disconnected from voice channel.";
 	}
 }
 
