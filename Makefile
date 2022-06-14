@@ -1,3 +1,3 @@
 all:	index.js
 	#node start.js
-	node index.js
+	node index.js log

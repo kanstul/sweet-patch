@@ -270,8 +270,6 @@ class CMD {
 	}
 	async list(interaction) {
 		let response = await this.LIST(this.PLAYLIST);
-		console.log("Attempting to return the message from `list`.  It is as follows.");
-		console.log(response);
 		return (response.length !== 0)? array_to_msg(response) : "Playlist empty.";
 		//return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
 	}
@@ -286,7 +284,8 @@ class CMD {
 			try {
 				let info = (await PlayDL.video_basic_info(song)).video_details;
 				let timestamp = get_timestamp(song);
-				timestamp = (timestamp > 0? "".concat(new Date(timestamp).toISOString().substring(11,19),"]->[") : "")
+				console.log("Timestamp is "+timestamp+'.');
+				timestamp = (timestamp > 0? "".concat(new Date(timestamp*1000).toISOString().substring(11,19),"]->[") : "")
 				//response.push("".concat(((Number(i)+HACK)+".").padEnd(5),"[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.')); 
 				response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
 				//response.push(info.title);
@@ -313,16 +312,16 @@ class CMD {
 					console.log("Delete this message.");
 					let tmp = await PlayDL.playlist_info(this.PLAYLIST[0]);
 					this.PLAYLIST.shift();
-					for (const video of tmp.fetched_videos.values())
-					{
-						for (let i=video.length-1;i>=0;--i){
-							this.PLAYLIST.unshift(video[i].url);
-							//console.log(video[i].url);
-						}
+					tmp = await tmp.all_videos();
+					for (let i=tmp.length-1;i>=0;--i) {
+						this.PLAYLIST.unshift(tmp[i].url);
+						if (this.PLAYLIST.length > this.MAX_PLAYLIST_SIZE)
+							this.PLAYLIST.pop(); // Make sure this works. 
 					}
 				}
 				catch {
 					console.log("Not a playlist.") //FINDABETTERWAY.
+					// This is here to prevent it being thrown to the farther on catch block. 
 				}
 				finally {
 					//console.log("Current playlist is as follows.");
@@ -366,13 +365,13 @@ class CMD {
 		if (this.AUTO_PLAY)
 			this.play_front();
 	}
-//	dropVolume(){
-//		this.resource.volume.setVolume(this.DAMP*this.VOLUME); // Set the volume to this.DAMP * this.VOLUME. 
-//	}
 	setVolume(fade_time){
-		let percentage = /*Math.max*/(Math.min((((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP), this.ONE)/*,this.FADE_TIME*/); //!!
+		fade_time = Math.min(fade_time,this.FADE_TIME); // Is this line really necessary? 
+		//console.log("Fade time given is "+fade_time+'.');
+		let percentage = Math.min((((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP), this.ONE);
 		//console.log(percentage * this.VOLUME);
 		this.resource.volume.setVolume(percentage * this.VOLUME);
+		//console.log("Playing at "+percentage*this.VOLUME);
 	}
 	abscond(interaction){
 		this.connection.destroy();
