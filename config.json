@@ -14,5 +14,8 @@
 	"BOT_USERS": "admin",
 	"REQUIRE_ROLE_FOR_VOLUME": false,
 	"VOLUME_USERS": "moderator",
-	"DROP": 10
+	"DROP": 10,
+	"DAMP_FOR_AMAI": false,
+	"DEBOUNCE": 50,
+	"QUEUE_MESSAGES": true
 }

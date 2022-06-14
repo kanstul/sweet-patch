@@ -20,10 +20,10 @@ const DiscordTTS = require("discord-tts");
 
 
 class CMD {
-		/*const*/ SILLY_MODE = false;
-		/*const*/ ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
-		/*const*/ ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
-		/*const*/ ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
+	/*const*/ SILLY_MODE = false;
+	/*const*/ ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
+	/*const*/ ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
+	/*const*/ ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
 
 	// Variables and such. 
 	TALKING = new Set(); 
@@ -32,25 +32,26 @@ class CMD {
 	    PLAYING = false; // Find a better way to do this. 
 	COMMANDS = []; // This can REALLY be known at compile time. 
 	connection = null;
-		LOOP = false;
-		LOOP_FRONT = false; 
-		VOLUME = 1.0;
-		AUTO_PLAY = true;
-		DAMP = 0.1;
-		MAX_HISTORY_SIZE = 100;
-		MAX_PLAYLIST_SIZE = 50;
-		LOCK_TO_CHANNEL_ONCE_JOINED = false;
-		FADE_TIME = 5000;
-		REQUIRE_ROLE_TO_USE = false;
+	player = null;
+	resource = null;
 
-		player = null;
-		resource = null;
-
-		BOT_USERS = "everyone";
-		REQUIRE_ROLE_FOR_VOLUME = false;
-		VOLUME_USERS = "everyone";
-		DROP = 10;
-
+	LOOP = false;
+	LOOP_FRONT = false; 
+	VOLUME = 1.0;
+	AUTO_PLAY = true;
+	DAMP = 0.1;
+	MAX_HISTORY_SIZE = 100;
+	MAX_PLAYLIST_SIZE = 50;
+	LOCK_TO_CHANNEL_ONCE_JOINED = false;
+	FADE_TIME = 5000;
+	REQUIRE_ROLE_TO_USE = false;
+	BOT_USERS = "everyone";
+	REQUIRE_ROLE_FOR_VOLUME = false;
+	VOLUME_USERS = "everyone";
+	DROP = 10;
+	DAMP_FOR_AMAI = false;
+	DEBOUNCE = 50;
+	TIMESTAMP = 0;
 
 	constructor(settings,player){ // <===
 		this.player = player;
@@ -66,43 +67,19 @@ class CMD {
 			return "No videos found."
 		else
 		{
-			//interaction.content = videos[0];
-			//return this.jump();
 			this.join(interaction);
-			this.PLAYLIST.unshift(videos[0].url);
+			this.PLAYLIST.unshift(videos[0].url); // Could make this give a choice of three videos like that other bot from forever ago did. 
 			return this.next(interaction);
 		}
 	}
 
 	async test(interaction) {
-		//let tmp = await PlayDL.video_basic_info('https://www.youtube.com/watch?v=IF6hYIf0Uzs');
-		//console.log("Type of `tmp` is "+typeof tmp);
-		//console.log(tmp.video_details.title);
-		//let tmp = await PlayDL.playlist_info('https://www.youtube.com/watch?v=H5v3kku4y6Q&list=PLMC9KNkIncKseYxDN2niH6glGRWKsLtde');
-		//tmp = await PlayDL.playlist_info('https://www.youtube.com/watch?v=H5v3kku4y6Q');
-		//song = await PlayDL.stream(this.PLAYLIST[0], {seek: get_timestamp(this.PLAYLIST[0])});
-		//console.log(tmp);
-//let answer = '\`\`\`0. [00:01:39]: Damask Roses: Roger Quilter. \n1. [00:01:54]: Rachmaninoff: Oh stay, my love, forsake me not. \n2. [00:02:16]: Rachmaninoff: Child, You Are Beautiful Like a Flower, Op.8, No.2. \n3. [00:01:40]: Seven Elizabethan Lyrics: III. Damask Roses. \n4. [00:01:39]: Damask Roses: Roger Quilter. \n5. [00:01:54]: Rachmaninoff: Oh stay, my love, forsake me not. \n6. [00:02:16]: Rachmaninoff: Child, You Are Beautiful Like a Flower, Op.8, No.2. \n7. [00:01:40]: Seven Elizabethan Lyrics: III. Damask Roses.\`\`\`'
-		//return answer;
-
-		return "Called the test function.";
-
-	}
-
-	/*=====
-	const DiscordTTS = require("discord-tts");
-	test(interaction) {
-		//interaction.channel.send("Hey there!");
-		//return "Test function was called.";
-		return this.read(interaction.options.getString('thisisjustfortesting'));
-	}
-	read(string) {
-		let stream = DiscordTTS.getVoiceStream(string);
-		let audioResource = createAudioResource(stream, {inlineVolume: true});
-		this.player.play(audioResource);
 		return "Called the test function.";
 	}
-	*///=====
+
+//	read(string) {
+//	Cool name. 
+//	}
 
 	kick(interaction) { // Delete this? 
 		resource = createAudioResource(test, {inlineVolume: true});
@@ -111,10 +88,14 @@ class CMD {
 	}
 	skip(interaction) {
 		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and this.AUTO_PLAY. 
-		this.player.stop();
+		// console.log("At `skip`, playlist is "+this.PLAYLIST+'.');
+		//this.player.stop();
+		this.PLAYLIST.shift();
+		this.next();
 		return ('Skipping.');
 	}
-	stop(interaction) {
+	//stop(interaction) {
+	pause(interaction) {
 		this.player.pause();
 		return ('Paused.');
 	}
@@ -122,11 +103,6 @@ class CMD {
 		this.player.unpause(); // Use && and fit into a single line instead? 
 		return ('Resumed.'); 
 	}
-	/*
-	async join(interaction) {
-		return this.JOIN(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
-	}
-	*/
 	async join(interaction) {
 		let guildId = interaction.guildId;
 		let channelId = interaction.member.voice.channelId;
@@ -153,7 +129,7 @@ class CMD {
 			// Should look into it at a future date though. 
 			this.connection.receiver.speaking.on("start", (userId) => {
 				//console.log("Someone started talking.")
-				if (userId != tts_clientId) // Consider.
+				if (this.DAMP_FOR_AMAI || userId != tts_clientId)
 					this.TALKING.add(`${userId}`)
 			});
 			this.connection.receiver.speaking.on("end", (userId) => {
@@ -205,8 +181,8 @@ class CMD {
 	help(interaction) {
 		let response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
 		for (const command of this.COMMANDS)
-			response.push((capitalize(command.name)+": ").padEnd(10).concat(command.description)); // This is kind of messy. 
-		return '\`\`\`'+response.join('\n')+'\`\`\`';
+			response.push((capitalize(command.name)+": ").padEnd(11).concat(command.description)); // This is kind of messy. 
+		return array_to_msg(response);
 	}
 	async strike(interaction) {
 		let from = interaction.options.getInteger('from');
@@ -218,7 +194,6 @@ class CMD {
 			return ("Indices backwards, no change.");
 		let response = await this.LIST(this.PLAYLIST.slice(from,until+1),from);
 		this.PLAYLIST.splice(from,(until - from) + 1);
-		//return '\`\`\`'+response.join('\n')+'\`\`\`'
 		return array_to_msg(response);
 	}
 	fade(interaction) {
@@ -261,17 +236,15 @@ class CMD {
 		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
 		if (!this.PLAYING && this.AUTO_PLAY)
 			this.play_front();
-		//return this.PLAYLIST[0] ?? "YAWNY";
-		return Number(songs.length); // Is this really the best way to get insert working? 
+		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
 	}
 	async history(interaction) {
 		let response = await this.LIST(this.HISTORY);
-		return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "No songs have been played.";
+		return (response.length !== 0)? array_to_msg(response) : "No songs have been played.";
 	}
 	async list(interaction) {
 		let response = await this.LIST(this.PLAYLIST);
 		return (response.length !== 0)? array_to_msg(response) : "Playlist empty.";
-		//return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
 	}
 	async LIST(list_given,HACK) {
 		let response = [];
@@ -284,7 +257,7 @@ class CMD {
 			try {
 				let info = (await PlayDL.video_basic_info(song)).video_details;
 				let timestamp = get_timestamp(song);
-				console.log("Timestamp is "+timestamp+'.');
+				//console.log("Timestamp is "+timestamp+'.');
 				timestamp = (timestamp > 0? "".concat(new Date(timestamp*1000).toISOString().substring(11,19),"]->[") : "")
 				//response.push("".concat(((Number(i)+HACK)+".").padEnd(5),"[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.')); 
 				response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
@@ -356,10 +329,12 @@ class CMD {
 			this.PLAYING = false; ///
 	}
 	cycle(){
+		//console.log("At the start of cycle(), playlist is "+this.PLAYLIST+'.');
 		if (this.LOOP)
 			this.PLAYLIST.push(this.PLAYLIST[0]);
 		else if (this.LOOP_FRONT)
 			this.PLAYLIST.unshift(this.PLAYLIST[0]);
+		//console.log("Playlist is "+this.PLAYLIST+'.');
 		this.PLAYLIST.shift();
 		this.PLAYING = false;
 		if (this.AUTO_PLAY)
@@ -372,6 +347,10 @@ class CMD {
 		//console.log(percentage * this.VOLUME);
 		this.resource.volume.setVolume(percentage * this.VOLUME);
 		//console.log("Playing at "+percentage*this.VOLUME);
+		if (this.PLAYING)
+			++this.TIMESTAMP;
+		else
+			this.TIMESTAMP = 0;
 	}
 	abscond(interaction){
 		this.connection.destroy();
@@ -380,6 +359,15 @@ class CMD {
 	clear(interaction){
 		this.PLAYLIST.splice(this.PLAYING?1:0,this.PLAYLIST.length);
 		return "Cleared the playlist.";
+	}
+	debounce(interaction){
+		return "Debounce was "+this.DEBOUNCE+", is now "+(this.DEBOUNCE = interaction.options.getInteger('debounce'))+'.';
+	}
+	timestamp(interaction){
+		return "It has been `"+this.TIMESTAMP/1000+"` seconds since this song started playing.";
+	}
+	ttsdamp(interaction){
+		return "Player will "+((this.DAMP_FOR_AMAI = !this.DAMP_FOR_AMAI)?"now":"not")+" dampen when Amai speaks.";
 	}
 }
 

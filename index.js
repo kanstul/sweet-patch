@@ -32,26 +32,17 @@ client.once('ready', ()=> {
 	//Cmd.play_front(); // Why do we have this? 
 	console.log(Cmd.next());
 	let fade_time = Cmd.FADE_TIME;
-const db = 250;
-		let debouncer = db; // Rename debouncer to lag? 
+	let debouncer = Cmd.DEBOUNCE; // Rename debouncer to lag? 
 let down = false;
 	setInterval( () => {
-		/*
-		if (Cmd.TALKING.size > 0 && fade_time < Cmd.FADE_TIME) { // When people are talking. 
-			fade_time += Cmd.DROP;
-		}
-		else if (fade_time > 1) { // When people stop talking. 
-			--fade_time;
-		}
-		*/
 		if (Cmd.TALKING.size > 0 && debouncer > 0)
 			--debouncer
-		else if (debouncer <= db)
+		else if (debouncer <= Cmd.DEBOUNCE)
 			++debouncer
 
 		if (debouncer < 1)
 			down = true;
-		else if (debouncer > db)
+		else if (debouncer > Cmd.DEBOUNCE)
 			down = false;
 
 		if (down && fade_time < Cmd.FADE_TIME)
@@ -106,10 +97,6 @@ try {
 	}
 });
 
-//player.on(AudioPlayerStatus.Idle, Cmd.cycle()); // <===  // Thisthing.
-
-player.on(AudioPlayerStatus.Idle, () => {
-	Cmd.cycle();
-});
+player.on(AudioPlayerStatus.Idle, Cmd.cycle); // <===  // Thisthing.
 
 client.login(token);

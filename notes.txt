@@ -1,23 +1,19 @@
-// TODO: Fix the fact that disabling autoplay doesn't actually disable autoplay. 
 // TODO: Make it `just-work` when you feed it a playlist. 
 // TODO: Add functionality to delete commands. \/\/.
 // TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
-// TODO: Rename `stop` to `pause`. 
 // TODO: Make sure that `play` isn't fucking things up, test it good. 
 // TODO: Make SILLY_MODE and all the rest `const` in `commands.js`, somehow. 
 // TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
 // TODO: Stop passing `player` in the constructor and just initialize it therein instead. 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: Make `TALK_TIME` linear and implement it more thoroughly. 
 // TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "FINDABETTERWAY."
 // TODO: CTRL+F "Thisthing."
 // TODO: CTRL+F "Find a better way to do this."
-// TODO: CTRL+F "Consider."
 // TODO: CTRL+F "ONE+1".
-// TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
+// TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.
 // TODO: Make `remove_non_URL_characters` better. 
 // TODO: Consider what global variables should be `const` and assign them appropriately. 
 // TODO: Fix that damnable `async` nonsense that's going on in the `cmd.list` function! 
@@ -28,7 +24,10 @@
 // TODO: Rename `abscond` to `leave`? 
 // TODO: Make `LOG` betterer. 
 // TODO: Have it send a message every time it starts playing a new song?  That'd be a trick.  Send it to the last channel it received a command from, maybe? 
-// TODO: Fix the fact that adding playlists can grossly overload the playlist limit. 
+// TODO: Fix the fact that disabling autoplay doesn't actually disable autoplay if it's enabled when you `push` but not when you `join`. 
+// TODO: Delete `affirm`? 
+// TODO: Figure out what the hell went wrong with `skip`. 
+// TODO: Make `amai` capable of reading excessively long messages, even though there's really no use case for it. 
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 
@@ -38,6 +37,7 @@
 // TEST: Functions `loop` and `keep`! 
 // TEST: Clean up `accrue`.
 // TEST: Fix the critical v14 bug! 
+// TEST: Fix the fact that adding playlists can grossly overload the playlist limit. 
 
 //NOTE:
 // NOTE: Weird things happen with a FADE_TIME of `0`, locked it to `ONE` with a Math.min. 
@@ -48,3 +48,5 @@
 // DONE: Call `TALK_TIME` `debouncer` instead? 
 // DONE: Implement `abscond`. 
 // DONE: Have `join` throw an error message if the user isn't in a voice channel. 
+// DONE: Rename `stop` to `pause`. 
+// DONE: Make `TALK_TIME` linear and implement it more thoroughly. 

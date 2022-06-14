@@ -19,7 +19,8 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 		new SlashCommandBuilder().setName('history').setDescription('Responds with a history of all songs played.'),
 		new SlashCommandBuilder().setName('skip').setDescription('Skips to the next song.'),
 		new SlashCommandBuilder().setName('next').setDescription('Manually forces the next song to play.'),
-		new SlashCommandBuilder().setName('stop').setDescription('Pauses song.'),
+		//new SlashCommandBuilder().setName('stop').setDescription('Pauses song.'),
+		new SlashCommandBuilder().setName('pause').setDescription('Pauses song.'),
 		new SlashCommandBuilder().setName('resume').setDescription('Resumes song.'),
 		new SlashCommandBuilder().setName('strike').setDescription('Removes songs from the first index given until the second.').addIntegerOption(opt=>opt.setName('from').setDescription('The index of the song to be removed.').setRequired(true)).addIntegerOption(opt=>opt.setName('until').setDescription('The index of the last song to be removed.').setRequired(true)),
 		new SlashCommandBuilder().setName('pop').setDescription('Removes the last song in the playlist.'),
@@ -37,6 +38,9 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 		new SlashCommandBuilder().setName('abscond').setDescription('Disconnect bot from voice channel.'),
 		new SlashCommandBuilder().setName('drop').setDescription('How much faster it fades out than fades in.').addIntegerOption(option => option.setName('drop').setDescription('The new drop level.').setRequired(true)),
 		new SlashCommandBuilder().setName('clear').setDescription('Empties the playlist.'),
+		new SlashCommandBuilder().setName('debounce').setDescription('Sets how many milliseconds someone must start or stop talking for before the bot will react.').addIntegerOption(option => option.setName('debounce').setDescription('The new debounce level.').setRequired(true)),
+		new SlashCommandBuilder().setName('timestamp').setDescription('Returns the amount of time the current song has been playing for.'),
+		new SlashCommandBuilder().setName('ttsdamp').setDescription('Toggles whether or not damping triggers when Amai reads commands.'),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -79,7 +83,7 @@ exports.affirm = function(conditional, error_msg, interaction){ // Bullying the 
 }
 
 exports.remove_non_URL_characters = function(string){
-	let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+;="; // , // Comma is deliberately excluded; is that prudent? 
+	let legal_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+;="; // ,"; // Comma is deliberately excluded; is that prudent? 
 	original_string = string;
 	fnl = "";
 	for (c of legal_characters)
@@ -90,14 +94,13 @@ exports.remove_non_URL_characters = function(string){
 }
 
 exports.respond = function(interaction,msg) {
+	//interaction.deferReply(msg);
 	console.log(msg);
-	//console.log(interaction);
 	if (interaction != null) {
 		//interaction.channel.send(msg);
 		//interaction.reply(msg);
 		interaction.editReply(msg);
 	}
-	//interaction.deferReply(msg);
 	return;
 }
 
