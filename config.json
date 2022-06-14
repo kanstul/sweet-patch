@@ -14,5 +14,5 @@
 	"BOT_USERS": "admin",
 	"REQUIRE_ROLE_FOR_VOLUME": false,
 	"VOLUME_USERS": "moderator",
-	"RENAME_FADE": 10
+	"DROP": 10
 }

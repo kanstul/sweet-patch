@@ -33,34 +33,36 @@ client.once('ready', ()=> {
 	console.log(Cmd.next());
 	let fade_time = Cmd.FADE_TIME;
 const db = 250;
-		let debouncer = db; // Rename debouncer to lag? 
-let down = false;
+		let debouncer = db;
 	setInterval( () => {
-		/*
 		if (Cmd.TALKING.size > 0 && fade_time < Cmd.FADE_TIME) { // When people are talking. 
-			fade_time += Cmd.DROP;
+			if (debouncer < 1)
+				fade_time += Cmd.DROP;
+			else {
+				--debouncer;
+				//if (fade_time > 1)
+					//--fade_time;
+			}
 		}
 		else if (fade_time > 1) { // When people stop talking. 
 			--fade_time;
+			debouncer = db;
 		}
-		*/
-		if (Cmd.TALKING.size > 0 && debouncer > 0)
-			--debouncer
-		else if (debouncer <= db)
-			++debouncer
+		/*
+		if (Cmd.TALKING.size > 0)
+			if (debouncer > 0) 
+				--debouncer;
+		else
+			debouncer = 200;
 
-		if (debouncer < 1)
-			down = true;
-		else if (debouncer > db)
-			down = false;
-
-		if (down && fade_time < Cmd.FADE_TIME)
+		if (debouncer < 1 && fade_time < Cmd.FADE_TIME)
 			fade_time += Cmd.DROP;
 		else if (fade_time > 1)
-			--fade_time;
+			--fade_time; 
+		*/
 
 		Cmd.setVolume(fade_time);
-		if (LOG) console.log(fade_time+','+debouncer+','+Cmd.TALKING.size);
+		if (LOG) console.log(fade_time+','+debouncer);
 	},1);
 
 });

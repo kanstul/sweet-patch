@@ -5,6 +5,8 @@ const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
 const yts = require("yt-search");
 
+const {tts_clientId} = require('./safe.json');
+
 const { initialize_commands, capitalize, remove_non_URL_characters, respond, get_timestamp, array_to_msg } = require('./utility.js')
 
 //!const this.player = createAudioPlayer();
@@ -48,7 +50,7 @@ class CMD {
 		BOT_USERS = "everyone";
 		REQUIRE_ROLE_FOR_VOLUME = false;
 		VOLUME_USERS = "everyone";
-		RENAME_FADE = 10;
+		DROP = 10;
 
 
 	constructor(settings,player){ // <===
@@ -115,11 +117,10 @@ class CMD {
 		return this.JOIN(interaction.guildId,interaction.member.voice.channelId,interaction.guild.voiceAdapterCreator);
 	}
 	*/
-
-	async JOIN(interaction) {
-		guildId = interaction.guildId;
-		channelId = interaction.member.voice.channelId;
-		adapterCreator = interaction.guild.voiceAdapterCreator;
+	async join(interaction) {
+		let guildId = interaction.guildId;
+		let channelId = interaction.member.voice.channelId;
+		let adapterCreator = interaction.guild.voiceAdapterCreator;
 
 		this.connection = getVoiceConnection(guildId);
 
@@ -142,7 +143,8 @@ class CMD {
 			// Should look into it at a future date though. 
 			this.connection.receiver.speaking.on("start", (userId) => {
 				//console.log("Someone started talking.")
-				this.TALKING.add(`${userId}`)
+				if (userId != tts_clientId) // Consider.
+					this.TALKING.add(`${userId}`)
 			});
 			this.connection.receiver.speaking.on("end", (userId) => {
 				//console.log("Someone stopped talking.")
@@ -211,8 +213,13 @@ class CMD {
 	}
 	fade(interaction) {
 		let response = 'Fade was \`'+this.FADE_TIME+'\`, is '
-		this.FADE_TIME = Math.max(interaction.options.getInteger('fade'),this.ONE);
+		this.FADE_TIME = Math.max(interaction.options.getInteger('fade'),this.ONE+1);
 		return response.concat('now \`'+this.FADE_TIME+'\`.');
+	}
+	drop(interaction) {
+		let old_drop = this.DROP;
+		this.DROP = interaction.options.getInteger('drop');
+		return "Player will now fade out `"+this.DROP+"x` faster than it fades in, was `"+old_drop+"x`.";
 	}
 	pop(interaction) {
 		return "Removed "+this.PLAYLIST.pop()+" from playlist.";
@@ -238,7 +245,8 @@ class CMD {
 		this.jump(interaction);
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}
-	#accrue(entry,index){
+	// Make this function private \/. 
+	accrue(entry,index){
 		let songs = remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE);
 		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
 		if (!this.PLAYING && this.AUTO_PLAY)
@@ -324,7 +332,7 @@ class CMD {
 //		this.resource.volume.setVolume(this.DAMP*this.VOLUME); // Set the volume to this.DAMP * this.VOLUME. 
 //	}
 	setVolume(fade_time){
-		let percentage = Math.min((((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP), this.ONE);
+		let percentage = /*Math.max*/(Math.min((((this.FADE_TIME - fade_time) / this.FADE_TIME) + this.DAMP), this.ONE)/*,this.FADE_TIME*/); //!!
 		//console.log(percentage * this.VOLUME);
 		this.resource.volume.setVolume(percentage * this.VOLUME);
 	}

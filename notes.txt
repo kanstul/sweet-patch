@@ -13,6 +13,8 @@
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "Thisthing."
 // TODO: CTRL+F "Find a better way to do this."
+// TODO: CTRL+F "Consider."
+// TODO: CTRL+F "ONE+1".
 // TODO: Call `TALK_TIME` `debouncer` instead? 
 // TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
 // TODO: Implement `abscond`. 
