@@ -12,6 +12,7 @@
 // TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
+// TODO: CTRL+F "FINDABETTERWAY."
 // TODO: CTRL+F "Thisthing."
 // TODO: CTRL+F "Find a better way to do this."
 // TODO: CTRL+F "Consider."

@@ -36,6 +36,7 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 		new SlashCommandBuilder().setName('test').setDescription('A test function, it should only be used by the developer.  REMOVE ME.').addStringOption(opt=>opt.setName('thisisjustfortesting').setDescription('Test.').setRequired(true)),
 		new SlashCommandBuilder().setName('abscond').setDescription('Disconnect bot from voice channel.'),
 		new SlashCommandBuilder().setName('drop').setDescription('How much faster it fades out than fades in.').addIntegerOption(option => option.setName('drop').setDescription('The new drop level.').setRequired(true)),
+		new SlashCommandBuilder().setName('clear').setDescription('Empties the playlist.'),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -90,7 +91,13 @@ exports.remove_non_URL_characters = function(string){
 
 exports.respond = function(interaction,msg) {
 	console.log(msg);
-	interaction.reply(msg);
+	//console.log(interaction);
+	if (interaction != null) {
+		//interaction.channel.send(msg);
+		//interaction.reply(msg);
+		interaction.editReply(msg);
+	}
+	//interaction.deferReply(msg);
 	return;
 }
 

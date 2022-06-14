@@ -82,9 +82,12 @@ try {
 	const { commandName } = interaction;
 	
 	try {
-		answer = await Cmd[commandName](interaction);
+		await interaction.deferReply();
+		let answer = await Cmd[commandName](interaction);
+		//console.log("TYPE OF ANSWER IS "+typeof answer+'.');
 		//console.log(answer);
 		//interaction.reply(answer);
+		//interaction.reply("Generic reply.");
 		respond(interaction,answer);
 	}
 	catch (error) {

@@ -1,7 +1,6 @@
 const { Client, Intents } = require('discord.js')
 const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 //const { token } = require('./config.json');
-const ytdl = require("ytdl-core");
 const PlayDL = require('play-dl');
 const yts = require("yt-search");
 
@@ -76,14 +75,18 @@ class CMD {
 	}
 
 	async test(interaction) {
-		let tmp = await PlayDL.video_basic_info('https://www.youtube.com/watch?v=IF6hYIf0Uzs');
-		console.log("Type of `tmp` is "+typeof tmp);
-		console.log(tmp.video_details.title);
+		//let tmp = await PlayDL.video_basic_info('https://www.youtube.com/watch?v=IF6hYIf0Uzs');
+		//console.log("Type of `tmp` is "+typeof tmp);
+		//console.log(tmp.video_details.title);
 		//let tmp = await PlayDL.playlist_info('https://www.youtube.com/watch?v=H5v3kku4y6Q&list=PLMC9KNkIncKseYxDN2niH6glGRWKsLtde');
 		//tmp = await PlayDL.playlist_info('https://www.youtube.com/watch?v=H5v3kku4y6Q');
 		//song = await PlayDL.stream(this.PLAYLIST[0], {seek: get_timestamp(this.PLAYLIST[0])});
 		//console.log(tmp);
+//let answer = '\`\`\`0. [00:01:39]: Damask Roses: Roger Quilter. \n1. [00:01:54]: Rachmaninoff: Oh stay, my love, forsake me not. \n2. [00:02:16]: Rachmaninoff: Child, You Are Beautiful Like a Flower, Op.8, No.2. \n3. [00:01:40]: Seven Elizabethan Lyrics: III. Damask Roses. \n4. [00:01:39]: Damask Roses: Roger Quilter. \n5. [00:01:54]: Rachmaninoff: Oh stay, my love, forsake me not. \n6. [00:02:16]: Rachmaninoff: Child, You Are Beautiful Like a Flower, Op.8, No.2. \n7. [00:01:40]: Seven Elizabethan Lyrics: III. Damask Roses.\`\`\`'
+		//return answer;
+
 		return "Called the test function.";
+
 	}
 
 	/*=====
@@ -270,29 +273,30 @@ class CMD {
 		console.log("Attempting to return the message from `list`.  It is as follows.");
 		console.log(response);
 		return (response.length !== 0)? array_to_msg(response) : "Playlist empty.";
-		return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
+		//return (response.length !== 0)? '\`\`\`'+response.join('\n')+'\`\`\`' : "Playlist empty.";
 	}
 	async LIST(list_given,HACK) {
 		let response = [];
 		HACK = HACK ?? 0;
+		const pad = Math.log10(list_given.length) + 3;
 		for (let i in list_given)
 		{
 			let song = list_given[i];
 			console.log("Song is "+song+'.');
 			try {
-		//let tmp = await PlayDL.video_basic_info('https://www.youtube.com/watch?v=IF6hYIf0Uzs');
-		//console.log(tmp.video_details.title);
-				let info = (await PlayDL.video_basic_info(song)).video_details;///await ytdl.getInfo(song);
+				let info = (await PlayDL.video_basic_info(song)).video_details;
 				let timestamp = get_timestamp(song);
 				timestamp = (timestamp > 0? "".concat(new Date(timestamp).toISOString().substring(11,19),"]->[") : "")
-				response.push("".concat((Number(i)+HACK),". [",timestamp,new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.')); 
-				//response.push("".concat((Number(i)+HACK),". [",timestamp,new Date(info.videoDetails.lengthSeconds*1000).toISOString().substring(11,19),"]: ",info.videoDetails.title,'.')); 
+				//response.push("".concat(((Number(i)+HACK)+".").padEnd(5),"[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.')); 
+				response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
+				//response.push(info.title);
 			} catch (e) {
 				// This isn't tripping for some reason, I don't know why. 
 				// Because broken promises, investigate at a later date. 
 				console.error(e);
 				response.push('Invalid song.');
 			}
+			///response.push(list_given[i]);
 		}
 		return response;
 	}
@@ -308,21 +312,22 @@ class CMD {
 				try {
 					console.log("Delete this message.");
 					let tmp = await PlayDL.playlist_info(this.PLAYLIST[0]);
-					//console.log(tmp.fetched_videos);
-					//tmp.fetched_videos.values().forEach(console.log("Hi."));
 					this.PLAYLIST.shift();
 					for (const video of tmp.fetched_videos.values())
 					{
 						for (let i=video.length-1;i>=0;--i){
 							this.PLAYLIST.unshift(video[i].url);
-							console.log(video[i].url);
+							//console.log(video[i].url);
 						}
 					}
 				}
+				catch {
+					console.log("Not a playlist.") //FINDABETTERWAY.
+				}
 				finally {
-					console.log("Current playlist is as follows.");
-					console.log(this.PLAYLIST);
-					console.log("Timestamp is "+get_timestamp(this.PLAYLIST[0])+'.');
+					//console.log("Current playlist is as follows.");
+					//console.log(this.PLAYLIST);
+					//console.log("Timestamp is "+get_timestamp(this.PLAYLIST[0])+'.');
 					song = await PlayDL.stream(this.PLAYLIST[0], {seek: get_timestamp(this.PLAYLIST[0])});
 				}
 			}
@@ -358,7 +363,8 @@ class CMD {
 			this.PLAYLIST.unshift(this.PLAYLIST[0]);
 		this.PLAYLIST.shift();
 		this.PLAYING = false;
-		this.play_front();
+		if (this.AUTO_PLAY)
+			this.play_front();
 	}
 //	dropVolume(){
 //		this.resource.volume.setVolume(this.DAMP*this.VOLUME); // Set the volume to this.DAMP * this.VOLUME. 
@@ -371,6 +377,10 @@ class CMD {
 	abscond(interaction){
 		this.connection.destroy();
 		return "Disconnected from voice channel.";
+	}
+	clear(interaction){
+		this.PLAYLIST.splice(this.PLAYING?1:0,this.PLAYLIST.length);
+		return "Cleared the playlist.";
 	}
 }
 
