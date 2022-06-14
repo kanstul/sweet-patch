@@ -83,12 +83,13 @@ try {
 	
 	try {
 		answer = await Cmd[commandName](interaction);
-		console.log(answer);
-		interaction.reply(answer);
+		//console.log(answer);
+		//interaction.reply(answer);
+		respond(interaction,answer);
 	}
 	catch (error) {
 		try {
-			respond(interaction,"Unknown error.");
+			respond(interaction,"Unknown error."); // IS THE FACT THAT WE LIKELY ALRADY BURNED THE INTERACTION IN THE TRY BLOCK A PROBLEM? 
 			console.error(error);
 		}
 		finally {

@@ -1,3 +1,4 @@
+// TODO: Fix the fact that disabling autoplay doesn't actually disable autoplay. 
 // TODO: Make it `just-work` when you feed it a playlist. 
 // TODO: Add functionality to delete commands. \/\/.
 // TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
@@ -15,19 +16,18 @@
 // TODO: CTRL+F "Find a better way to do this."
 // TODO: CTRL+F "Consider."
 // TODO: CTRL+F "ONE+1".
-// TODO: Call `TALK_TIME` `debouncer` instead? 
 // TODO: THIS IS A GOOD ONE.  Add a `move` function that moves a song from somewhere in the playlist to somewhere else.  Will be easier if we rewrite everything to work by `!eval`ing. 
-// TODO: Implement `abscond`. 
 // TODO: Make `remove_non_URL_characters` better. 
 // TODO: Consider what global variables should be `const` and assign them appropriately. 
 // TODO: Fix that damnable `async` nonsense that's going on in the `cmd.list` function! 
 // TODO: Pick some more careful names for the `argv`s. 
 // TODO: CTRL+F "Fix later." 
 // TODO: Add a function to remove videos by URL/title/whatever. 
-// TODO: Have `join` throw an error message if the user isn't in a voice channel. 
 // TODO: You know, `halt` would be a good name for something.  We should use that. 
 // TODO: Rename `abscond` to `leave`? 
 // TODO: Make `LOG` betterer. 
+// TODO: Have it send a message every time it starts playing a new song?  That'd be a trick.  Send it to the last channel it received a command from, maybe? 
+// TODO: Fix the fact that adding playlists can grossly overload the playlist limit. 
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 
@@ -44,3 +44,6 @@
 //DONE: 
 // DONE: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
 // DONE: Implement YouTube search function. 
+// DONE: Call `TALK_TIME` `debouncer` instead? 
+// DONE: Implement `abscond`. 
+// DONE: Have `join` throw an error message if the user isn't in a voice channel. 

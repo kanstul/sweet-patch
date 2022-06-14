@@ -17,7 +17,7 @@ const tts_client = new Client({
 
 tts_client.login(tts_token);
 
-tts_client.once('enunciatey', ()=> {
+tts_client.once('ready', ()=> {
 	console.log('Amai, online!');
 });
 
