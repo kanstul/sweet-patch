@@ -15,15 +15,11 @@ const tts_client = new Client({
 	],
 });
 
-const name = "AMAI ";
-
 tts_client.login(tts_token);
 
 const {QUEUE_MESSAGES = true} = require('./config.json');
 
 var PLAYING = false;
-
-const MAX_LENGTH = 180;
 
 tts_client.once('ready', ()=> {
 	console.log('Amai, online!');
@@ -33,12 +29,12 @@ tts_client.once('ready', ()=> {
 			console.log("Passed the `if` statement.");
 			console.log("Not undefined, now "+queue[0].content);
 			try {
-				if (queue[0].content.length <= MAX_LENGTH) {
+				if (queue[0].content.length <= 200) {
 					enunciate(queue[0].content);
 				}
 				else
 				{
-					let tmp = queue[0].content.match(/.{1,MAX_LENGTH}/g);
+					let tmp = queue[0].content.match(/.{1,200}/g);
 					queue.shift();
 					for (let i = tmp.length-1; i>= 0; --i) {
 						let hack = new Object();
@@ -67,7 +63,7 @@ tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 		tts_player.stop();
 	else if (msg.content == 'MOTO URUSAI.')
 		queue.splice(0,queue.length),tts_player.stop();
-	else if (msg.content == "FORCE FOLLOW." || msg.content == "G-BEAT." || (msg.author.id == clientId/* && msg.content == "Joined."*/)) {
+	if (msg.content == "FORCE FOLLOW." || msg.content == "G-BEAT." || (msg.author.id == clientId/* && msg.content == "Joined."*/)) {
 		console.log("If tripped.");
 		let connection = getVoiceConnection(msg.guildId);
 		connection = joinVoiceChannel({
@@ -84,19 +80,9 @@ tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 	}
 });
 
-const ONLY_READ_NOW_PLAYINGS = true;
-
 function enunciate(string) {
-	console.log("Enunciating "+string+'.');
 	PLAYING = true;
 	//console.log("Enunciate was called.");
-	if (string.startsWith(name))
-		string = "..Now playing.  ".concat(string.slice(name.length));
-	else if (ONLY_READ_NOW_PLAYINGS){
-		queue[0].shift();
-		PLAYING = false;
-		return; // !!!
-	}
 	string = string.replaceAll('`','')
 	let stream = DiscordTTS.getVoiceStream(string);
 	let audioResource = createAudioResource(stream, {inlineVolume: true});

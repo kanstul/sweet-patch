@@ -313,10 +313,7 @@ class CMD {
 	}
 	async jump(interaction) {
 		// Make this actually return right.  // Doofopoly. 
-		if (PLAYING)
-			return this.INSERT(interaction,1);
-		else
-			return this.INSERT(interaction,0);
+		return this.INSERT(interaction,1);
 	}
 	async insert(interaction) {
 		let index = interaction.options.getInteger('index');
@@ -325,7 +322,7 @@ class CMD {
 		return this.INSERT(interaction,interaction.options.getInteger('index'));
 	}
 	async INSERT(interaction,index) {
-		let len = await this.accrue(interaction.options.getString('url'),index); /// If this isn't `await` then `play` is super liable to return `undefined`. 
+		let len = this.accrue(interaction.options.getString('url'),index);
 		let response = await(this.LIST(this.PLAYLIST.slice(index,index+len),index));
 		return array_to_msg(response);
 	}
@@ -336,7 +333,7 @@ class CMD {
 			if (song.startsWith('https') && PlayDL.yt_validate(song) === 'playlist') {
 				let tmp = await PlayDL.playlist_info(song);
 				tmp = await tmp.all_videos();
-				for (let i=(parseInt((/index=(\d+)/.exec(song)??[1,1])[1]) - 1);i<tmp.length && i < this.MAX_PLAYLIST_SIZE;++i) {
+				for (let i=0;i<tmp.length && i < this.MAX_PLAYLIST_SIZE;++i) {
 					console.log("Calling Songish.create() with "+tmp[i].url+', which is of type '+typeof tmp[i].url + '.');
 					let info = /*await*/ Songish.create(tmp[i].url);
 					if (Songish.isValidURL(tmp[i].url))
@@ -358,16 +355,13 @@ class CMD {
 		}
 		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
 	}
-	async play(interaction) {
+	play(interaction) {
 		//if (!this.connection) 
 			this.join(interaction);
 		this.PLAYING = false; 
 		this.JUST_SKIPPED = true; // Doofopoly. 
 		//this.INSERT(interaction,0);
-		await this.INSERT(interaction,0);
-		/// Learn to use promises! 
-		//console.log(this.PLAYLIST);
-		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
+		this.jump(interaction);
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}
 	// Make this function private \/. 
@@ -404,7 +398,7 @@ class CMD {
 		return response;
 	}
 
-	async play_front() { // Rename to `next`?  // TAGTAG. 
+	async play_front() { // Rename to `next`? 
 
 		this.JUST_SKIPPED = false // Doofopoly. 
 
@@ -415,7 +409,38 @@ class CMD {
 			console.log("Playlist[0] is: "+this.PLAYLIST[0]+".");
 			let song = null;
 			try {
-				song = await PlayDL.stream(this.PLAYLIST[0], {seek: get_timestamp(this.PLAYLIST[0])});
+				/*
+				if (url.startsWith('https') && PlayDL.yt_validate(this.PLAYLIST[0]) === 'playlist') {
+					let tmp = await PlayDL.playlist_info(this.PLAYLIST[0]);
+					this.PLAYLIST.shift();
+					tmp = await tmp.all_videos();
+					console.log(tmp);
+					process.exit(1);
+				}
+				*/
+				try {
+					console.log("Delete this message.");
+					let tmp = await PlayDL.playlist_info(this.PLAYLIST[0]);
+					this.PLAYLIST.shift();
+					tmp = await tmp.all_videos();
+					for (let i=tmp.length-1;i>=0;--i) {
+						this.PLAYLIST.unshift(tmp[i].url);
+						if (this.PLAYLIST.length > this.MAX_PLAYLIST_SIZE)
+							this.PLAYLIST.pop(); // Make sure this works. 
+					}
+				}
+				/*
+				catch {
+					console.log("Not a playlist.") //FINDABETTERWAY.
+					// This is here to prevent it being thrown to the farther on catch block. 
+				}
+				*/
+				finally {
+					//console.log("Current playlist is as follows.");
+					//console.log(this.PLAYLIST);
+					//console.log("Timestamp is "+get_timestamp(this.PLAYLIST[0])+'.');
+					song = await PlayDL.stream(this.PLAYLIST[0], {seek: get_timestamp(this.PLAYLIST[0])});
+				}
 			}
 			catch (e) {
 				// None of this actually executes; why is that? 

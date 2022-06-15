@@ -104,7 +104,9 @@ exports.respond = function(interaction,msg) {
 		//interaction.editReply(msg.slice(2000));
 		//msg = msg.slice(2000);
 		//msg = msg.substring(0,2000);
-		msg = msg.slice(0,2000)
+		if (msg.length >= 2000) {
+			msg = msg.slice(0,1996).concat('-\`\`\`');
+		}
 		interaction.editReply(msg);
 		//interaction.editReply("Test reply.");
 	}
