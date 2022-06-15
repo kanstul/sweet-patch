@@ -97,9 +97,9 @@ class CMD {
 		console.log("Constructor called.");
 		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
-		//setInterval( ()=> {
-		//	console.log(this.PLAYLIST);
-		//},1);
+		setInterval( ()=> {
+			this.ResolveINFO();
+		},5000); // The amount of milliseconds it waits between laboriously iterating over every single element of the map, resolving promises so that we can save a lot of time when `LIST` is called. 
 	}
 
 	async search(interaction) {
@@ -369,7 +369,6 @@ class CMD {
 				//let info = (await PlayDL.video_basic_info(song)).video_details;
 				let timestamp = get_timestamp(song);
 				timestamp = (timestamp > 0? "".concat(new Date(timestamp*1000).toISOString().substring(11,19),"]->[") : "")
-				//response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
 				let info = await this.INFO.get(song);
 				response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.duration*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
 			} catch (e) {
