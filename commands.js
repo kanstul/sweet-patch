@@ -97,9 +97,10 @@ class CMD {
 		console.log("Constructor called.");
 		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
+		const SECONDS_BETWEEN_GARBAGE_COLLECTIONS;
 		setInterval( ()=> {
 			this.ResolveINFO();
-		},5000); // The amount of milliseconds it waits between laboriously iterating over every single element of the map, resolving promises so that we can save a lot of time when `LIST` is called. 
+		},SECONDS_BETWEEN_GARBAGE_COLLECTIONS);// The amount of milliseconds it waits between laboriously iterating over every single element of the map, resolving promises so that we can save a lot of time when `LIST` is called.
 	}
 
 	async search(interaction) {
@@ -115,17 +116,17 @@ class CMD {
 	}
 
 	async test(interaction) {
-		let tmp = Number(interaction.options.getString('thisisjustfortesting'));
-		this.Wind(tmp);
-		return "Calling `Wind()` with "+tmp+".";
+		console.log(this.INFO);
 		return "Called the test function.";
 	}
 
-	async ResolveINFO() {
+	async ResolveINFO() { // This is more or less a garbage collector. 
 		for (const key of this.INFO.keys()) {
 			//console.log("The URL was "+this.INFO.get(key).url);
 			this.INFO.set(key,await this.INFO.get(key));
 			//console.log("The URL is "+this.INFO.get(key).url);
+			if (!this.PLAYLIST.includes(key) && !this.HISTORY.includes(key))
+				this.INFO.delete(key);
 		}
 		return "Resolved.";
 	}
