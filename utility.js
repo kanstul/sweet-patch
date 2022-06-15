@@ -99,7 +99,12 @@ exports.respond = function(interaction,msg) {
 	if (interaction != null) {
 		//interaction.channel.send(msg);
 		//interaction.reply(msg);
+		//interaction.editReply(msg.slice(2000));
+		//msg = msg.slice(2000);
+		//msg = msg.substring(0,2000);
+		msg = msg.slice(0,2000)
 		interaction.editReply(msg);
+		//interaction.editReply("Test reply.");
 	}
 	return;
 }

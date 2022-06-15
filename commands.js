@@ -52,6 +52,7 @@ class CMD {
 	DAMP_FOR_AMAI = false;
 	DEBOUNCE = 50;
 	TIMESTAMP = 0;
+	JUST_SKIPPED = false;
 
 	constructor(settings,player){ // <===
 		this.player = player;
@@ -59,6 +60,11 @@ class CMD {
 		console.log("Constructor called.");
 		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
+		/*
+		setInterval( ()=> {
+			console.log(this.PLAYLIST);
+		},1);
+		*/
 	}
 
 	async search(interaction) {
@@ -82,16 +88,14 @@ class CMD {
 //	}
 
 	kick(interaction) { // Delete this? 
-		resource = createAudioResource(test, {inlineVolume: true});
-		player.play(resource);
+		let resource = createAudioResource(test, {inlineVolume: true});
+		this.player.play(resource);
+		console.log("Rattle.");
 		return ('\`*Rattle*\`');
 	}
 	skip(interaction) {
-		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and this.AUTO_PLAY. 
-		// console.log("At `skip`, playlist is "+this.PLAYLIST+'.');
-		//this.player.stop();
-		this.PLAYLIST.shift();
-		this.next();
+		this.JUST_SKIPPED = true; // Doofopoly. 
+		this.player.stop();
 		return ('Skipping.');
 	}
 	//stop(interaction) {
@@ -188,7 +192,7 @@ class CMD {
 		let from = interaction.options.getInteger('from');
 		let until = interaction.options.getInteger('until');
 		//if (until == undefined) until = from; // Fix later.
-		if (until >= this.PLAYLIST.length || from < 0)
+		if (until > this.PLAYLIST.length || from < 0)
 			return "Index out of bounds.";
 		if (until < from)
 			return ("Indices backwards, no change.");
@@ -211,22 +215,39 @@ class CMD {
 	}
 	async insert(interaction) {
 		let index = interaction.options.getInteger('index');
+		if (index < 0 || index > this.PLAYLIST.length) // Doofopoly. 
+			return "Index out of bounds."; 
+		return this.INSERT(interaction,interaction.options.getInteger('index'));
+	}
+	async INSERT(interaction,index) {
 		let len = this.accrue(interaction.options.getString('url'),index);
 		let response = await(this.LIST(this.PLAYLIST.slice(index,index+len),index));
 		return array_to_msg(response);
 	}
-	push(interaction) {
+	async push(interaction) {
+		return this.INSERT(interaction,this.PLAYLIST.length);
+		/*
 		this.accrue(interaction.options.getString('url'),this.PLAYLIST.length);
 		return "Appended "+this.PLAYLIST[this.PLAYLIST.length-1]+'.';
+		*/
 	}
-	jump(interaction) {
+	async jump(interaction) {
+		// Make this actually return right.  // Doofopoly. 
+		return this.INSERT(interaction,1);
+		/*
 		this.accrue(interaction.options.getString('url'),0);
-		return "Prepended "+this.PLAYLIST[0]+'.';
+		let len = this.accrue(interaction.options.getString('url'))
+		let response = await(this.LIST(this.PLAYLIST.slice(0,len)));
+		return array_to_msg(response);
+		//return "Prepended "+this.PLAYLIST[0]+'.';
+		*/
 	}
 	play(interaction) {
 		//if (!this.connection) 
 			this.join(interaction);
 		this.PLAYING = false; 
+		this.JUST_SKIPPED = true; // Doofopoly. 
+		//this.INSERT(interaction,0);
 		this.jump(interaction);
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}
@@ -234,8 +255,10 @@ class CMD {
 	accrue(entry,index){
 		let songs = remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE);
 		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
-		if (!this.PLAYING && this.AUTO_PLAY)
+		if ((!this.PLAYING && this.AUTO_PLAY) || this.JUST_SKIPPED){ // Doofopoly. 
+			this.JUST_SKIPPED = false;
 			this.play_front();
+		}
 		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
 	}
 	async history(interaction) {
@@ -274,6 +297,9 @@ class CMD {
 	}
 
 	async play_front() { // Rename to `next`? 
+
+		this.JUST_SKIPPED = false // Doofopoly. 
+
 		// Do a `let variable = this.PLAYLIST[0];` to make this a bit cleaner? 
 		console.log('Play_front()');
 		if (this.PLAYLIST.length > 0) {
@@ -292,10 +318,12 @@ class CMD {
 							this.PLAYLIST.pop(); // Make sure this works. 
 					}
 				}
+				/*
 				catch {
 					console.log("Not a playlist.") //FINDABETTERWAY.
 					// This is here to prevent it being thrown to the farther on catch block. 
 				}
+				*/
 				finally {
 					//console.log("Current playlist is as follows.");
 					//console.log(this.PLAYLIST);
@@ -313,6 +341,9 @@ class CMD {
 				this.resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
 			}
 			catch (e) {
+				console.log("Wasn't a valid song, can not play.");
+				console.log("Wasn't a valid song, can not play.");
+				console.log("Wasn't a valid song, can not play.");
 				this.cycle();
 				return;
 			}
@@ -329,16 +360,20 @@ class CMD {
 			this.PLAYING = false; ///
 	}
 	cycle(){
+		console.log("Cycle was called.");
 		//console.log("At the start of cycle(), playlist is "+this.PLAYLIST+'.');
 		if (this.LOOP)
 			this.PLAYLIST.push(this.PLAYLIST[0]);
 		else if (this.LOOP_FRONT)
 			this.PLAYLIST.unshift(this.PLAYLIST[0]);
 		//console.log("Playlist is "+this.PLAYLIST+'.');
+		//console.log("PLAYLIST IS "+this.PLAYLIST+'.');
 		this.PLAYLIST.shift();
 		this.PLAYING = false;
-		if (this.AUTO_PLAY)
+		if (this.AUTO_PLAY || this.JUST_SKIPPED) { // Doofopoly. 
+			this.JUST_SKIPPED = false;
 			this.play_front();
+		}
 	}
 	setVolume(fade_time){
 		fade_time = Math.min(fade_time,this.FADE_TIME); // Is this line really necessary? 
@@ -361,7 +396,7 @@ class CMD {
 		return "Cleared the playlist.";
 	}
 	debounce(interaction){
-		return "Debounce was "+this.DEBOUNCE+", is now "+(this.DEBOUNCE = interaction.options.getInteger('debounce'))+'.';
+		return "Debounce was "+this.DEBOUNCE+", is now "+(this.DEBOUNCE = Math.max(0,interaction.options.getInteger('debounce')))+'.';
 	}
 	timestamp(interaction){
 		return "It has been `"+this.TIMESTAMP/1000+"` seconds since this song started playing.";

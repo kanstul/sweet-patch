@@ -97,6 +97,10 @@ try {
 	}
 });
 
-player.on(AudioPlayerStatus.Idle, Cmd.cycle); // <===  // Thisthing.
+//player.on(AudioPlayerStatus.Idle, Cmd.cycle); // <===  // Thisthing.
+
+player.on(AudioPlayerStatus.Idle, () => {
+	Cmd.cycle();
+},1);
 
 client.login(token);

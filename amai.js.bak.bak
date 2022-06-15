@@ -21,37 +21,33 @@ const {QUEUE_MESSAGES = false} = require('./config.json');
 
 var PLAYING = false;
 
+var LOCK = false;
+
 tts_client.once('ready', ()=> {
 	console.log('Amai, online!');
 	setInterval( () => {
 		//console.log("Blink.");
-		//if ((!QUEUE_MESSAGES || !PLAYING) && queue[0] != undefined && queue[0].content != '') {
-		if (!PLAYING && queue[0] != undefined && queue[0].content != '') {
-			console.log("Passed the `if` statement.");
+		//console.log(queue);
+		if (!LOCK && (!QUEUE_MESSAGES || !PLAYING) && queue[0] != undefined && (typeof queue[0] === 'string' || queue[0].content != '')) {
+			PLAYING = true;
 			console.log("Not undefined, now "+queue[0].content);
+			console.log(queue);
 			try {
-				if (queue[0].content.length <= 200) {
-					enunciate(queue[0].content);
-					queue.shift();
-				}
-				else
+				if (typeof queue[0] === 'string')// queue[0].content.length <= 100)
 				{
-					let tmp = queue[0].content.match(/.{1,200}/g);
+					enunciate(queue[0]);
 					queue.shift();
-					for (let i = tmp.length-1; i>= 0; --i) {
-						let hack = new Object();
-						hack.content = tmp[i];
-						queue.unshift(hack);
-					}
-					//console.log(queue);
-					//let hack = new Object();
-					//hack.content = "This is just a test."
-					//queue.unshift(hack);
-					//console.log("Queue is now as follows.");
-					//console.log(queue);
 				}
-				else
-					console.log("Playing is true.");
+				else{
+					let tmp = queue[0].content;
+					queue.shift();
+					console.log("Tmp is "+tmp+'.');
+					queue.unshift(tmp);
+					console.log("Unshifted `tmp`, queue as follows.");
+					console.log(queue);
+					console.log("Type of queue[0] is "+typeof queue[0]+'.');
+				}
+					//enunciate("Message too long to read.");
 			}
 			catch (e){
 				console.log(e);
@@ -62,16 +58,6 @@ tts_client.once('ready', ()=> {
 			}
 			*/
 		}
-		else {
-			/*
-			if (queue[0] == undefined)
-				console.log('Undefined.');
-			else
-				console.log(queue[0].content);
-			*/
-		}
-				
-		//console.log(queue);
 	},1);
 });
 
@@ -98,19 +84,32 @@ tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 		connection.subscribe(tts_player);
 		//enunciate(msg.content);
 		queue.push(msg);
-		//console.log(queue);
 	}
+	/*
+	console.log(queue.length);
+	for (i of queue)
+		console.log(i.content);
+	*/
 });
 
 function enunciate(string) {
-	PLAYING = true;
+	LOCK = true;
 	console.log("Enunciate was called.");
 	string = string.replaceAll('`','')
+	/*
+	while (string.length > 100){
+		console.log("Attempting to stream "+string.slice(0,100));
+		let stream = DiscordTTS.getVoiceStream(string.slice(0,100));
+		let audioResource = createAudioResource(stream, {inlineVolume: true});
+		tts_player.play(audioResource);
+		string = string.slice(100);
+		while (PLAYING){};
+	}
+	*/
 	let stream = DiscordTTS.getVoiceStream(string);
 	let audioResource = createAudioResource(stream, {inlineVolume: true});
 	tts_player.play(audioResource);
-	//PLAYING = false;
-	console.log("Exiting enunciate.");
+	LOCK = false;
 	return "Called the test function.";
 }
 

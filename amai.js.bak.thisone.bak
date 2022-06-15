@@ -26,8 +26,9 @@ tts_client.once('ready', ()=> {
 	setInterval( () => {
 		//console.log("Blink.");
 		//if ((!QUEUE_MESSAGES || !PLAYING) && queue[0] != undefined && queue[0].content != '') {
-		if (!PLAYING && queue[0] != undefined && queue[0].content != '') {
+		if (queue[0] != undefined && queue[0].content != '') {
 			console.log("Passed the `if` statement.");
+			PLAYING = true;
 			console.log("Not undefined, now "+queue[0].content);
 			try {
 				if (queue[0].content.length <= 200) {
@@ -36,22 +37,27 @@ tts_client.once('ready', ()=> {
 				}
 				else
 				{
-					let tmp = queue[0].content.match(/.{1,200}/g);
+					/*
+					let tmp = queue[0].content.match(/.{1,100}/g)
 					queue.shift();
-					for (let i = tmp.length-1; i>= 0; --i) {
+					for (let i=tmp.length-1; i>=0; --i) {
 						let hack = new Object();
 						hack.content = tmp[i];
+						console.log(hack);
 						queue.unshift(hack);
 					}
+					console.log(queue);
 					//console.log(queue);
-					//let hack = new Object();
-					//hack.content = "This is just a test."
-					//queue.unshift(hack);
-					//console.log("Queue is now as follows.");
-					//console.log(queue);
+					//console.log(queue[0].content.match(/.{1,200}/g));
+					//enunciate("Message too long to read.");
+					*/
+					queue.shift();
+					let hack = new Object();
+					hack.content = "This is just a test."
+					queue.unshift(hack);
+					console.log("Queue is now as follows.");
+					console.log(queue);
 				}
-				else
-					console.log("Playing is true.");
 			}
 			catch (e){
 				console.log(e);
@@ -63,12 +69,10 @@ tts_client.once('ready', ()=> {
 			*/
 		}
 		else {
-			/*
 			if (queue[0] == undefined)
 				console.log('Undefined.');
 			else
 				console.log(queue[0].content);
-			*/
 		}
 				
 		//console.log(queue);
@@ -103,14 +107,11 @@ tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 });
 
 function enunciate(string) {
-	PLAYING = true;
 	console.log("Enunciate was called.");
 	string = string.replaceAll('`','')
 	let stream = DiscordTTS.getVoiceStream(string);
 	let audioResource = createAudioResource(stream, {inlineVolume: true});
 	tts_player.play(audioResource);
-	//PLAYING = false;
-	console.log("Exiting enunciate.");
 	return "Called the test function.";
 }
 

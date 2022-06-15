@@ -1,3 +1,4 @@
+// TODO: Add ff/rwd. 
 // TODO: Make it `just-work` when you feed it a playlist. 
 // TODO: Add functionality to delete commands. \/\/.
 // TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
@@ -28,6 +29,7 @@
 // TODO: Delete `affirm`? 
 // TODO: Figure out what the hell went wrong with `skip`. 
 // TODO: Make `amai` capable of reading excessively long messages, even though there's really no use case for it. 
+// TODO: Jump ahead in the playlist to some index. 
 
 //TEST: 
 // TEST: Re-order the list that the commands go in. 

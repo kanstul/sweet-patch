@@ -17,7 +17,7 @@ const tts_client = new Client({
 
 tts_client.login(tts_token);
 
-const {QUEUE_MESSAGES = false} = require('./config.json');
+const {QUEUE_MESSAGES = true} = require('./config.json');
 
 var PLAYING = false;
 
@@ -26,21 +26,28 @@ tts_client.once('ready', ()=> {
 	setInterval( () => {
 		//console.log("Blink.");
 		if ((!QUEUE_MESSAGES || !PLAYING) && queue[0] != undefined && queue[0].content != '') {
-			PLAYING = true;
+			console.log("Passed the `if` statement.");
 			console.log("Not undefined, now "+queue[0].content);
 			try {
-				if (queue[0].content.length <= 200)
+				if (queue[0].content.length <= 200) {
 					enunciate(queue[0].content);
+				}
 				else
-					enunciate("Message too long to read.");
+				{
+					let tmp = queue[0].content.match(/.{1,200}/g);
+					queue.shift();
+					for (let i = tmp.length-1; i>= 0; --i) {
+						let hack = new Object();
+						hack.content = tmp[i];
+						queue.unshift(hack);
+					}
+				}
 			}
 			catch (e){
 				console.log(e);
 			}
-			finally {
-				queue.shift();
-			}
 		}
+		//console.log(queue);
 	},1);
 });
 
@@ -54,6 +61,8 @@ const queue = [];
 tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 	if (msg.content == 'URUSAI.')
 		tts_player.stop();
+	else if (msg.content == 'MOTO URUSAI.')
+		queue.splice(0,queue.length),tts_player.stop();
 	if (msg.content == "FORCE FOLLOW." || msg.content == "G-BEAT." || (msg.author.id == clientId/* && msg.content == "Joined."*/)) {
 		console.log("If tripped.");
 		let connection = getVoiceConnection(msg.guildId);
@@ -67,29 +76,19 @@ tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 		connection.subscribe(tts_player);
 		//enunciate(msg.content);
 		queue.push(msg);
+		//console.log(queue);
 	}
-	/*
-	console.log(queue.length);
-	for (i of queue)
-		console.log(i.content);
-	*/
 });
 
 function enunciate(string) {
-	console.log("Enunciate was called.");
+	PLAYING = true;
+	//console.log("Enunciate was called.");
 	string = string.replaceAll('`','')
-	/*
-	while (string.length > 200){
-		console.log("Attempting to stream "+string.slice(0,200));
-		let stream = DiscordTTS.getVoiceStream(string.slice(0,200));
-		let audioResource = createAudioResource(stream, {inlineVolume: true});
-		tts_player.play(audioResource);
-		string = string.slice(200);
-	}
-	*/
 	let stream = DiscordTTS.getVoiceStream(string);
 	let audioResource = createAudioResource(stream, {inlineVolume: true});
 	tts_player.play(audioResource);
+	//PLAYING = false;
+	//console.log("Exiting enunciate.");
 	return "Called the test function.";
 }
 
@@ -100,8 +99,5 @@ tts_player.on(AudioPlayerStatus.Buffering, () => {
 tts_player.on(AudioPlayerStatus.Idle, () => {
 	console.log("Idle.");
 	PLAYING = false;
-	//SPEAKING = false;
-	//if (queue.length > 0)
-		//cmd.enunciate(queue[0]);
-	//queue.shift(); // ^^? 
+	queue.shift();
 });
