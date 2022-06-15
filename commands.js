@@ -366,13 +366,12 @@ class CMD {
 			let song = list_given[i];
 			console.log("Song is "+song+'.');
 			try {
-				let info = (await PlayDL.video_basic_info(song)).video_details;
+				//let info = (await PlayDL.video_basic_info(song)).video_details;
 				let timestamp = get_timestamp(song);
-				//console.log("Timestamp is "+timestamp+'.');
 				timestamp = (timestamp > 0? "".concat(new Date(timestamp*1000).toISOString().substring(11,19),"]->[") : "")
-				//response.push("".concat(((Number(i)+HACK)+".").padEnd(5),"[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.')); 
-				response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
-				//response.push(info.title);
+				//response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.durationInSec*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
+				let info = await this.INFO.get(song);
+				response.push(((Number(i)+HACK)+".").padEnd(pad,' ').concat("[", timestamp, new Date(info.duration*1000).toISOString().substring(11,19),"]: ",info.title,'.'));
 			} catch (e) {
 				// This isn't tripping for some reason, I don't know why. 
 				// Because broken promises, investigate at a later date. 
