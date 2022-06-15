@@ -18,40 +18,74 @@ const DiscordTTS = require("discord-tts");
 
 //const config_settings = require('./config.json');
 
+class Song {
+	url;
+	title;
+	duration;
+	startt; // Start time. 
+	valid;
+	constructor(url,startt){
+		try {
+			if (this.valid = Song.isValidURL(this.url = url)) {
+				//this.url = url;
+				this.startt = startt ?? get_timestamp(url) // ?? 0;
+				this.init(url);
+			}
+			else console.log("Invalid URL was fed to the function Song.constructor().");
+		}
+		catch (e) {
+			console.error(e);
+			console.log("Unknown error in Song.constructor().")
+		}
+	}
+	async init (url){ /// Better to do it this way than with `this.url`.  Doing it the other way can crash the whole program. 
+		let info = (await PlayDL.video_basic_info(url)).video_details;
+		this.title = info.title;
+		this.duration = info.durationInSec;
+	}
+	static isValidURL(url) {
+		return (url.startsWith('https') && PlayDL.yt_validate(url) === 'video')
+	}
+}
 
 class CMD {
-	/*const*/ SILLY_MODE = false;
-	/*const*/ ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
-	/*const*/ ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
-	/*const*/ ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
+	// Capitalized functions are internal, as if they were private. 
+
+	// Constants. 
+	 SILLY_MODE = false;
+	 ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
+	 ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
+	 ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
 
 	// Variables and such. 
 	TALKING = new Set(); 
 	PLAYLIST = [];
 	HISTORY = [];
-	    PLAYING = false; // Find a better way to do this. 
 	COMMANDS = []; // This can REALLY be known at compile time. 
+	    PLAYING = false; // Find a better way to do this. 
+	JUST_SKIPPED = false;
+	TIMESTAMP = 0;
 	connection = null;
 	player = null;
 	resource = null;
 
+	// Settings. 
 	LOOP = false;
 	LOOP_FRONT = false; 
 	VOLUME = 1.0;
 	AUTO_PLAY = true;
 	DAMP = 0.1;
+	FADE_TIME = 5000;
+	DROP = 10;
+	DEBOUNCE = 50;
 	MAX_HISTORY_SIZE = 100;
 	MAX_PLAYLIST_SIZE = 50;
 	LOCK_TO_CHANNEL_ONCE_JOINED = false;
-	FADE_TIME = 5000;
 	REQUIRE_ROLE_TO_USE = false;
 	BOT_USERS = "everyone";
 	REQUIRE_ROLE_FOR_VOLUME = false;
 	VOLUME_USERS = "everyone";
-	DROP = 10;
 	DAMP_FOR_AMAI = false;
-	DEBOUNCE = 50;
-	TIMESTAMP = 0;
 
 	constructor(settings,player){ // <===
 		this.player = player;
@@ -93,27 +127,7 @@ class CMD {
 		return ('\`*Rattle*\`');
 	}
 	skip(interaction) {
-		// play_front(); // This also works, but I think it's better to leave control of this in the hands of /auto and this.AUTO_PLAY. 
-		// console.log("At `skip`, playlist is "+this.PLAYLIST+'.');
-		//this.player.stop();
-		//this.PLAYLIST.shift(); // FIX THIS FIX THIS SERIOUSLY. 
-		/*
-		console.log(this.PLAYLIST);
-		if (this.PLAYLIST.length === 1) {
-			this.player.stop();
-		}
-		else {
-			this.next();
-		}
-		*/
-		/*
-		this.PLAYLIST.shift();
-		if (this.PLAYLIST.length > 1)
-			this.next();
-		else {
-			this.kick()
-		}
-		*/
+		this.JUST_SKIPPED = true; // Doofopoly. 
 		this.player.stop();
 		return ('Skipping.');
 	}
@@ -211,7 +225,7 @@ class CMD {
 		let from = interaction.options.getInteger('from');
 		let until = interaction.options.getInteger('until');
 		//if (until == undefined) until = from; // Fix later.
-		if (until >= this.PLAYLIST.length || from < 0)
+		if (until > this.PLAYLIST.length || from < 0)
 			return "Index out of bounds.";
 		if (until < from)
 			return ("Indices backwards, no change.");
@@ -232,7 +246,44 @@ class CMD {
 	pop(interaction) {
 		return "Removed "+this.PLAYLIST.pop()+" from playlist.";
 	}
+	Insert(string, index){
+		index = index ?? 0; /// Do we need this line, or will it just default to zero? 
+		let songs = this.String_to_songs(string);
+		this.PLAYLIST.splice(index,0,...songs);
+		Sanctify();
+		return Math.max (index+songs.length, MAX_PLAYLIST_SIZE); // Index of last song inserted. 
+	}
+	Sanctify(){
+		// Make sure that the playlist isn't too long. 
+		return;
+	}
+	async String_to_songs(string){
+		let urls = remove_non_URL_characters(string).split(' ');
+		let songs = [];
+		for (let url of urls) { /// We could make the `await` only trigger if a boolean we pass in the function call is true. 
+			//let song = Song.create(url);
+			let song = new Song(url);
+			if (song.valid)
+				songs.push(song);
+			//if (Song.isValidURL(url))
+				//songs.push(/*await*/ Song.create(url));
+			//else continue;
+		}
+		//songs = (await Promise.all(songs)).filter(o => o != null); // Thank you, TGOOOJ! 
+		return songs;//.slice(0,this.MAX_PLAYLIST_SIZE); ? 
+	}
+	/*
+	async push(interaction) {
+		return this.INSERT(interaction,this.PLAYLIST.length);
+	}
+	async jump(interaction) {
+		// Make this actually return right.  // Doofopoly. 
+		return this.INSERT(interaction,1);
+	}
 	async insert(interaction) {
+		let index = interaction.options.getInteger('index');
+		if (index < 0 || index > this.PLAYLIST.length) // Doofopoly. 
+			return "Index out of bounds."; 
 		return this.INSERT(interaction,interaction.options.getInteger('index'));
 	}
 	async INSERT(interaction,index) {
@@ -240,38 +291,26 @@ class CMD {
 		let response = await(this.LIST(this.PLAYLIST.slice(index,index+len),index));
 		return array_to_msg(response);
 	}
-	async push(interaction) {
-		return this.INSERT(interaction,this.PLAYLIST.length);
-		/*
-		this.accrue(interaction.options.getString('url'),this.PLAYLIST.length);
-		return "Appended "+this.PLAYLIST[this.PLAYLIST.length-1]+'.';
-		*/
+	accrue(entry,index){
+		let songs = remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE);
+		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
+		if ((!this.PLAYING && this.AUTO_PLAY) || this.JUST_SKIPPED){ // Doofopoly. 
+			this.JUST_SKIPPED = false;
+			this.play_front();
+		}
+		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
 	}
-	async jump(interaction) {
-		return this.INSERT(interaction,0);
-		/*
-		this.accrue(interaction.options.getString('url'),0);
-		let len = this.accrue(interaction.options.getString('url'))
-		let response = await(this.LIST(this.PLAYLIST.slice(0,len)));
-		return array_to_msg(response);
-		//return "Prepended "+this.PLAYLIST[0]+'.';
-		*/
-	}
+	*/
 	play(interaction) {
 		//if (!this.connection) 
 			this.join(interaction);
 		this.PLAYING = false; 
+		this.JUST_SKIPPED = true; // Doofopoly. 
+		//this.INSERT(interaction,0);
 		this.jump(interaction);
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}
 	// Make this function private \/. 
-	accrue(entry,index){
-		let songs = remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE);
-		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
-		if (!this.PLAYING && this.AUTO_PLAY)
-			this.play_front();
-		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
-	}
 	async history(interaction) {
 		let response = await this.LIST(this.HISTORY);
 		return (response.length !== 0)? array_to_msg(response) : "No songs have been played.";
@@ -308,6 +347,9 @@ class CMD {
 	}
 
 	async play_front() { // Rename to `next`? 
+
+		this.JUST_SKIPPED = false // Doofopoly. 
+
 		// Do a `let variable = this.PLAYLIST[0];` to make this a bit cleaner? 
 		console.log('Play_front()');
 		if (this.PLAYLIST.length > 0) {
@@ -349,6 +391,9 @@ class CMD {
 				this.resource = createAudioResource(song.stream, {inputType : song.type, inlineVolume: true});
 			}
 			catch (e) {
+				console.log("Wasn't a valid song, can not play.");
+				console.log("Wasn't a valid song, can not play.");
+				console.log("Wasn't a valid song, can not play.");
 				this.cycle();
 				return;
 			}
@@ -365,17 +410,20 @@ class CMD {
 			this.PLAYING = false; ///
 	}
 	cycle(){
+		console.log("Cycle was called.");
 		//console.log("At the start of cycle(), playlist is "+this.PLAYLIST+'.');
 		if (this.LOOP)
 			this.PLAYLIST.push(this.PLAYLIST[0]);
 		else if (this.LOOP_FRONT)
 			this.PLAYLIST.unshift(this.PLAYLIST[0]);
 		//console.log("Playlist is "+this.PLAYLIST+'.');
-		console.log("PLAYLIST IS "+this.PLAYLIST+'.');
+		//console.log("PLAYLIST IS "+this.PLAYLIST+'.');
 		this.PLAYLIST.shift();
 		this.PLAYING = false;
-		if (this.AUTO_PLAY)
+		if (this.AUTO_PLAY || this.JUST_SKIPPED) { // Doofopoly. 
+			this.JUST_SKIPPED = false;
 			this.play_front();
+		}
 	}
 	setVolume(fade_time){
 		fade_time = Math.min(fade_time,this.FADE_TIME); // Is this line really necessary? 
@@ -398,7 +446,7 @@ class CMD {
 		return "Cleared the playlist.";
 	}
 	debounce(interaction){
-		return "Debounce was "+this.DEBOUNCE+", is now "+(this.DEBOUNCE = interaction.options.getInteger('debounce'))+'.';
+		return "Debounce was "+this.DEBOUNCE+", is now "+(this.DEBOUNCE = Math.max(0,interaction.options.getInteger('debounce')))+'.';
 	}
 	timestamp(interaction){
 		return "It has been `"+this.TIMESTAMP/1000+"` seconds since this song started playing.";
@@ -409,3 +457,21 @@ class CMD {
 }
 
 module.exports = CMD;
+
+settings = require('./config.json');
+Cmd = new CMD(settings);
+
+main = async function(){
+	//let tmp = await Song.create('https://youtu.be/6MWn1dMqI6Q?t=5');
+	//console.log(tmp);
+	let tmp = await Cmd.String_to_songs(' ')
+	console.log(tmp);
+	//Cmd.Insert(tmp,0);
+	setInterval( () => {
+		//console.log(Cmd.PLAYLIST);
+		console.log(tmp);
+	},1000);
+}
+
+main();
+

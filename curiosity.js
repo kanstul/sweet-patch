@@ -16,7 +16,9 @@ const test = './second-of-silence.mp3'; //'https://www.youtube.com/watch?v=cdwal
 // Variables and such. 
 const DiscordTTS = require("discord-tts");
 
-class Songish {
+//const config_settings = require('./config.json');
+
+class Song {
 	url;
 	title;
 	duration;
@@ -29,30 +31,28 @@ class Songish {
 		let info = (await PlayDL.video_basic_info(this.url)).video_details;
 		this.title = info.title;
 		this.duration = info.durationInSec;
+		//this.title = PlayDL.video_basic_info(this.url).video_details.title;
+		//this.duration = PlayDL.video_basic_info(this.url).video_details.title.durationInSec;
 	}
-	static async create(url,startt){
-		if (!Songish.isValidURL(url))
+	static /*async*/ create(url,startt){
+		if (!Song.isValidURL(url))
 			return null;
 		try {
-			const This = new Songish(url,startt);
-			await This.init(); /// Need this be `await`?  I think it must. 
+			const This = new Song(url,startt);
+			This.init();
 			return This;
 		}
 		catch (e) { /// This catch block shouldn't ever execute since the earlier `if` should catch everything; but just in case. 
-			console.error("Catch block in Songish tripped.");
-			console.error(e);
-			console.error("Catch block in Songish tripped.");
 			return null;
 		}
 	}
-	static isValidURL(url) { /// Move to `utility`? 
-		return url.startsWith('https') && PlayDL.yt_validate(url) === 'video';
+	static isValidURL(url) {
+		return (url.startsWith('https') && PlayDL.yt_validate(url) === 'video')
 	}
 }
 
-//const config_settings = require('./config.json');
 class CMD {
-	// This comment no longe relevant.  // Capitalized functions are internal, as if they were private. 
+	// Capitalized functions are internal, as if they were private. 
 
 	// Constants. 
 	 SILLY_MODE = false;
@@ -60,7 +60,7 @@ class CMD {
 	 ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
 	 ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
 
-	// Variables necessary to function. 
+	// Variables and such. 
 	TALKING = new Set(); 
 	PLAYLIST = [];
 	HISTORY = [];
@@ -68,7 +68,6 @@ class CMD {
 	    PLAYING = false; // Find a better way to do this. 
 	JUST_SKIPPED = false;
 	TIMESTAMP = 0;
-	 INFO = new Map(); // Name better? 
 	connection = null;
 	player = null;
 	resource = null;
@@ -97,9 +96,11 @@ class CMD {
 		console.log("Constructor called.");
 		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
-		//setInterval( ()=> {
-		//	console.log(this.PLAYLIST);
-		//},1);
+		/*
+		setInterval( ()=> {
+			console.log(this.PLAYLIST);
+		},1);
+		*/
 	}
 
 	async search(interaction) {
@@ -115,19 +116,6 @@ class CMD {
 	}
 
 	async test(interaction) {
-		//console.log(this.INFO);
-		//this.INFO.forEach(async (value,key) => { this.INFO.set(key,await value); }); /// Mindfuck. 
-		//for ([key, value] of this.INFO)
-			//console.log(value);
-		//for (let value of this.INFO.values())
-			//value = await value;
-			//console.log("Value is "+value+'.');
-		for (const key of this.INFO.keys()) {
-			console.log("The URL was "+this.INFO.get(key).url);
-			this.INFO.set(key,await this.INFO.get(key));
-			console.log("The URL is "+this.INFO.get(key).url);
-		}
-		//console.log(this.INFO);
 		return "Called the test function.";
 	}
 
@@ -261,33 +249,32 @@ class CMD {
 	pop(interaction) {
 		return "Removed "+this.PLAYLIST.pop()+" from playlist.";
 	}
-	
-//	Insert(string, index){
-//		index = index ?? 0; /// Do we need this line, or will it just default to zero? 
-//		let songs = this.String_to_songs(string);
-//		this.PLAYLIST.splice(index,0,...songs);
-//		Sanctify();
-//		return Math.max (index+songs.length, MAX_PLAYLIST_SIZE); // Index of last song inserted. 
-//	}
-//	Sanctify(){
-//		// Make sure that the playlist isn't too long. 
-//		return;
-//	}
-//	async String_to_songs(string){
-//		let urls = remove_non_URL_characters(string).split(' ');
-//		let songs = [];
-//		for (let url of urls) { /// We could make the `await` only trigger if a boolean we pass in the function call is true. 
-//			//let song = Song.create(url);
-//			let song = new Song(url);
-//			if (song.valid)
-//				songs.push(song);
-//			//if (Song.isValidURL(url))
-//				//songs.push(/*await*/ Song.create(url));
-//			//else continue;
-//		}
-//		//songs = (await Promise.all(songs)).filter(o => o != null); // Thank you, TGOOOJ! 
-//		return songs;//.slice(0,this.MAX_PLAYLIST_SIZE); ? 
-//	}
+	Insert(string, index){
+		index = index ?? 0; /// Do we need this line, or will it just default to zero? 
+		let songs = this.String_to_songs(string);
+		this.PLAYLIST.splice(index,0,...songs);
+		Sanctify();
+		return Math.max (index+songs.length, MAX_PLAYLIST_SIZE); // Index of last song inserted. 
+	}
+	Sanctify(){
+		// Make sure that the playlist isn't too long. 
+		return;
+	}
+	async String_to_songs(string){
+		let urls = remove_non_URL_characters(string).split(' ');
+		let songs = [];
+		for (let url of urls) { /// We could make the `await` only trigger if a boolean we pass in the function call is true. 
+			let song = Song.create(url);
+			if (song != null)
+				songs.push(song);
+			//if (Song.isValidURL(url))
+				//songs.push(/*await*/ Song.create(url));
+			//else continue;
+		}
+		//songs = (await Promise.all(songs)).filter(o => o != null); // Thank you, TGOOOJ! 
+		return songs;//.slice(0,this.MAX_PLAYLIST_SIZE); ? 
+	}
+	/*
 	async push(interaction) {
 		return this.INSERT(interaction,this.PLAYLIST.length);
 	}
@@ -306,13 +293,8 @@ class CMD {
 		let response = await(this.LIST(this.PLAYLIST.slice(index,index+len),index));
 		return array_to_msg(response);
 	}
-	/*async */accrue(entry,index){
+	accrue(entry,index){
 		let songs = remove_non_URL_characters(entry).split(' ').slice(0,this.MAX_PLAYLIST_SIZE);
-		for (let song of songs) {
-			let info = /*await*/ Songish.create(song);
-			if (Songish.isValidURL(song))
-				this.INFO.set(song,info);
-		}
 		this.PLAYLIST.splice(index,0,...songs).slice(0,this.MAX_PLAYLIST_SIZE);
 		if ((!this.PLAYING && this.AUTO_PLAY) || this.JUST_SKIPPED){ // Doofopoly. 
 			this.JUST_SKIPPED = false;
@@ -320,6 +302,7 @@ class CMD {
 		}
 		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
 	}
+	*/
 	play(interaction) {
 		//if (!this.connection) 
 			this.join(interaction);
@@ -476,3 +459,20 @@ class CMD {
 }
 
 module.exports = CMD;
+
+settings = require('./config.json');
+Cmd = new CMD(settings);
+
+main = async function(){
+	//let tmp = await Song.create('https://youtu.be/6MWn1dMqI6Q?t=5');
+	//console.log(tmp);
+	let tmp = await Cmd.String_to_songs('https://youtu.be/6MWn1dMqI6Q?t=5 . spaghetti https://youtu.be/6MWn1dMqI6Q?t=4 https://youtu.be/6MWn1dMqI6Q?t=3');
+	//Cmd.Insert(tmp,0);
+	setInterval( () => {
+		//console.log(Cmd.PLAYLIST);
+		console.log(tmp);
+	},1000);
+}
+
+main();
+
