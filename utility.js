@@ -41,6 +41,8 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 		new SlashCommandBuilder().setName('debounce').setDescription('Sets how many milliseconds someone must start or stop talking for before the bot will react.').addIntegerOption(option => option.setName('debounce').setDescription('The new debounce level.').setRequired(true)),
 		new SlashCommandBuilder().setName('timestamp').setDescription('Returns the amount of time the current song has been playing for.'),
 		new SlashCommandBuilder().setName('ttsdamp').setDescription('Toggles whether or not damping triggers when Amai reads commands.'),
+		new SlashCommandBuilder().setName('rewind').setDescription('Rewinds the current song.').addIntegerOption(option => option.setName('seconds').setDescription('How many seconds to rewind.').setRequired(true)),
+		new SlashCommandBuilder().setName('fastforward').setDescription('Fast-forwards current song.').addIntegerOption(option => option.setName('seconds').setDescription('How many seconds to push the song forward.').setRequired(true)),
 		// Use commas. 
 	]
 		.map(command => command.toJSON());
@@ -110,6 +112,7 @@ exports.respond = function(interaction,msg) {
 }
 
 exports.get_timestamp = function(url) {
+	// Don't forget to adjust the function `Wind()` too! 
 	return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
 	// Thanks, `The Great Old One of Javascript`. 
 }

@@ -115,20 +115,39 @@ class CMD {
 	}
 
 	async test(interaction) {
-		//console.log(this.INFO);
-		//this.INFO.forEach(async (value,key) => { this.INFO.set(key,await value); }); /// Mindfuck. 
-		//for ([key, value] of this.INFO)
-			//console.log(value);
-		//for (let value of this.INFO.values())
-			//value = await value;
-			//console.log("Value is "+value+'.');
-		for (const key of this.INFO.keys()) {
-			console.log("The URL was "+this.INFO.get(key).url);
-			this.INFO.set(key,await this.INFO.get(key));
-			console.log("The URL is "+this.INFO.get(key).url);
-		}
-		//console.log(this.INFO);
+		let tmp = Number(interaction.options.getString('thisisjustfortesting'));
+		this.Wind(tmp);
+		return "Calling `Wind()` with "+tmp+".";
 		return "Called the test function.";
+	}
+
+	async ResolveINFO() {
+		for (const key of this.INFO.keys()) {
+			//console.log("The URL was "+this.INFO.get(key).url);
+			this.INFO.set(key,await this.INFO.get(key));
+			//console.log("The URL is "+this.INFO.get(key).url);
+		}
+		return "Resolved.";
+	}
+
+	fastforward(interaction) {
+		return "Fast-forwarding to `"+this.Wind(interaction.options.getInteger('seconds'))+"` seconds.";
+	}
+
+	rewind(interaction) {
+		return "Rewinding to `"+this.Wind(-interaction.options.getInteger('seconds'))+"` seconds.";
+	}
+
+	Wind(seconds) {
+		// This function exploits the screwy way in which get_timestamp works! 
+		//return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
+		let fnl = this.TIMESTAMP/1000 + seconds;
+		console.log("In wind, PLAYLIST[0] is "+this.PLAYLIST[0]+'.');
+		this.PLAYLIST[0] = this.PLAYLIST[0].concat("?t=",Math.floor((this.TIMESTAMP/1000)+seconds)); // Do we actually need the `Math.floor`?  // Doofopoly.  (Not really). 
+		console.log("In wind, just shoved "+this.PLAYLIST[0]+" on, let's see how that goes.");
+		this.play_front();
+		//this.skip();
+		return fnl;
 	}
 
 //	read(string) {
@@ -233,7 +252,7 @@ class CMD {
 	help(interaction) {
 		let response = []; // Maybe this funny response and loop thing should be its own function.  That'd be more `LISP`y. 
 		for (const command of this.COMMANDS)
-			response.push((capitalize(command.name)+": ").padEnd(11).concat(command.description)); // This is kind of messy. 
+			response.push((capitalize(command.name)+": ").padEnd(14).concat(command.description)); // This is kind of messy. 
 		return array_to_msg(response);
 	}
 	async strike(interaction) {

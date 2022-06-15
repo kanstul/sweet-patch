@@ -1,4 +1,4 @@
-// TODO: Add ff/rwd. 
+// TODO: Rewrite `LIST()` and assorted functions to go off of the new `INFO` map. 
 // TODO: Make it `just-work` when you feed it a playlist. 
 // TODO: Add functionality to delete commands. \/\/.
 // TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
@@ -6,6 +6,7 @@
 // TODO: Make SILLY_MODE and all the rest `const` in `commands.js`, somehow. 
 // TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
 // TODO: Stop passing `player` in the constructor and just initialize it therein instead. 
+// TODO: Resolve all the `Doofopoly`s. 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
@@ -40,6 +41,7 @@
 // TEST: Clean up `accrue`.
 // TEST: Fix the critical v14 bug! 
 // TEST: Fix the fact that adding playlists can grossly overload the playlist limit. 
+// TEST: Add ff/rwd. 
 
 //NOTE:
 // NOTE: Weird things happen with a FADE_TIME of `0`, locked it to `ONE` with a Math.min. 
