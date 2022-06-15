@@ -18,41 +18,72 @@ const DiscordTTS = require("discord-tts");
 
 //const config_settings = require('./config.json');
 
+class Song {
+	url;
+	title;
+	duration;
+	startt; // Start time. 
+	constructor(url,startt){
+		this.url = url;
+		this.startt = startt ?? get_timestamp(url) // ?? 0;
+	}
+	async init (){
+		let info = (await PlayDL.video_basic_info(this.url)).video_details;
+		this.title = info.title;
+		this.duration = info.durationInSec;
+	}
+	static async create(url,startt){
+		const This = new Song(url,startt);
+		await This.init();
+		return This;
+	}
+}
+
+
+main = async function(){
+	let tmp = await Song.create('https://youtu.be/6MWn1dMqI6Q?t=5');
+	console.log(tmp);
+}
+
+main();
+
 
 class CMD {
-	/*const*/ SILLY_MODE = false;
-	/*const*/ ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
-	/*const*/ ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
-	/*const*/ ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
+	// Constants. 
+	 SILLY_MODE = false;
+	 ABSOLUTE_MAX_HISTORY_SIZE = 1000; // Math.min this, somehow. 
+	 ABSOLUTE_MAX_PLAYLIST_SIZE = 255;
+	 ONE = (this.SILLY_MODE)? MAX_VALUE : 1;
 
 	// Variables and such. 
 	TALKING = new Set(); 
 	PLAYLIST = [];
 	HISTORY = [];
-	    PLAYING = false; // Find a better way to do this. 
 	COMMANDS = []; // This can REALLY be known at compile time. 
+	    PLAYING = false; // Find a better way to do this. 
+	JUST_SKIPPED = false;
+	TIMESTAMP = 0;
 	connection = null;
 	player = null;
 	resource = null;
 
+	// Settings. 
 	LOOP = false;
 	LOOP_FRONT = false; 
 	VOLUME = 1.0;
 	AUTO_PLAY = true;
 	DAMP = 0.1;
+	FADE_TIME = 5000;
+	DROP = 10;
+	DEBOUNCE = 50;
 	MAX_HISTORY_SIZE = 100;
 	MAX_PLAYLIST_SIZE = 50;
 	LOCK_TO_CHANNEL_ONCE_JOINED = false;
-	FADE_TIME = 5000;
 	REQUIRE_ROLE_TO_USE = false;
 	BOT_USERS = "everyone";
 	REQUIRE_ROLE_FOR_VOLUME = false;
 	VOLUME_USERS = "everyone";
-	DROP = 10;
 	DAMP_FOR_AMAI = false;
-	DEBOUNCE = 50;
-	TIMESTAMP = 0;
-	JUST_SKIPPED = false;
 
 	constructor(settings,player){ // <===
 		this.player = player;
