@@ -502,7 +502,8 @@ class CMD {
 		return "Debounce was "+this.DEBOUNCE+", is now "+(this.DEBOUNCE = Math.max(0,interaction.options.getInteger('debounce')))+'.';
 	}
 	timestamp(interaction){
-		return "It has been `"+this.TIMESTAMP/1000+"` seconds since this song started playing.";
+		//return "It has been `"+this.TIMESTAMP/1000+"` seconds since this song started playing.";
+		return "We are `"+this.TIMESTAMP/1000+"` seconds into the currently playing video.";
 	}
 	ttsdamp(interaction){
 		return "Player will "+((this.DAMP_FOR_AMAI = !this.DAMP_FOR_AMAI)?"now":"not")+" dampen when Amai speaks.";

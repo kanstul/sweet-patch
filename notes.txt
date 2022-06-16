@@ -1,8 +1,6 @@
 // TODO: Save current progress in video so can play funny memes? 
-// TODO: Fix the fact that you can't fast-forward or rewind more than once because TIMESTAMP isn't adjusted properly. 
 // TODO: Ctrl+F "//,".
 // TODO: Rewrite `LIST()` and assorted functions to go off of the new `INFO` map. 
-// TODO: Make it `just-work` when you feed it a playlist. 
 // TODO: Add functionality to delete commands. \/\/.
 // TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
 // TODO: Make sure that `play` isn't fucking things up, test it good. 
@@ -11,8 +9,6 @@
 // TODO: Stop passing `player` in the constructor and just initialize it therein instead. 
 // TODO: Resolve all the `Doofopoly`s. 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
-// TODO: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s. 
 // TODO: Add functionality to change the maximum PLAYLIST and HISTORY lengths: max(_,_) them against some reasonable ABSOLUTE_MAX... value. 
 // TODO: CTRL+F "FINDABETTERWAY."
 // TODO: CTRL+F "Thisthing."
@@ -44,7 +40,7 @@
 // TEST: Clean up `accrue`.
 // TEST: Fix the critical v14 bug! 
 // TEST: Fix the fact that adding playlists can grossly overload the playlist limit. 
-// TEST: Add ff/rwd. 
+// TEST: Fix the fact that you can't fast-forward or rewind more than once because TIMESTAMP isn't adjusted properly. 
 
 //NOTE:
 // NOTE: Weird things happen with a FADE_TIME of `0`, locked it to `ONE` with a Math.min. 
@@ -57,3 +53,7 @@
 // DONE: Have `join` throw an error message if the user isn't in a voice channel. 
 // DONE: Rename `stop` to `pause`. 
 // DONE: Make `TALK_TIME` linear and implement it more thoroughly. 
+// DONE: Add ff/rwd. 
+// DONE: Make it `just-work` when you feed it a playlist. 
+// DONE: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
+// DONE: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s.  // Worked past this one. 
