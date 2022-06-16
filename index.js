@@ -34,6 +34,7 @@ client.once('ready', ()=> {
 	let fade_time = Cmd.FADE_TIME;
 	let debouncer = Cmd.DEBOUNCE; // Rename debouncer to lag? 
 let down = false;
+								const {guildId, clientId} = require('./safe.json');
 	setInterval( () => {
 		if (Cmd.TALKING.size > 0 && debouncer > 0)
 			--debouncer
@@ -52,6 +53,9 @@ let down = false;
 
 		Cmd.setVolume(fade_time);
 		if (LOG) console.log(fade_time+','+debouncer+','+Cmd.TALKING.size);
+		//,let tmp = client.guilds.cache.get(guildId).channels.cache.get(clientId)
+		//,if (tmp != undefined) 
+			//,console.log(tmp.voice.channel.members.size());
 	},1);
 
 });

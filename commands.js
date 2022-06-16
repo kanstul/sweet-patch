@@ -90,6 +90,7 @@ class CMD {
 	REQUIRE_ROLE_FOR_VOLUME = false;
 	VOLUME_USERS = "everyone";
 	DAMP_FOR_AMAI = false;
+		HACK = 0; //,
 
 	constructor(settings,player){ // <===
 		this.player = player;
@@ -98,6 +99,7 @@ class CMD {
 		this.COMMANDS = initialize_commands(false);
 		Object.assign(this,settings);
 		const SECONDS_BETWEEN_GARBAGE_COLLECTIONS = 5000;
+		let counter = 0;
 		setInterval( ()=> {
 			this.ResolveINFO();
 		},SECONDS_BETWEEN_GARBAGE_COLLECTIONS);// The amount of milliseconds it waits between laboriously iterating over every single element of the map, resolving promises so that we can save a lot of time when `LIST` is called.
@@ -109,9 +111,13 @@ class CMD {
 			return "No videos found."
 		else
 		{
+			////interaction.content = 'Hahahahah.';
+			return await this.play(interaction,videos[0].url);
+			/*
 			this.join(interaction);
 			this.PLAYLIST.unshift(videos[0].url); // Could make this give a choice of three videos like that other bot from forever ago did. 
 			return this.next(interaction);
+			*/
 		}
 	}
 
@@ -182,6 +188,7 @@ class CMD {
 
 		this.connection = getVoiceConnection(guildId);
 
+
 		if (!this.LOCK_TO_CHANNEL_ONCE_JOINED || !this.connection) {
 			this.connection = joinVoiceChannel({
 				channelId: channelId,
@@ -192,6 +199,13 @@ class CMD {
 			});
 			this.connection.subscribe(this.player); // <== 
 		}
+		
+
+		/*
+		//console.log(this.connection);
+		if (this.connection == null)
+			return "You are not in a voice channel.";
+			*/ //,
 
 		try {
 			await entersState(this.connection, VoiceConnectionStatus.Ready, 20e3);
@@ -358,13 +372,17 @@ class CMD {
 		}
 		return Number(songs.length); // Is this really the best way to get insert working?  YAWNY. 
 	}
-	async play(interaction) {
+	async play(interaction,_video_) {
+		console.log("Play was called, video was "+_video_+'.');
 		//if (!this.connection) 
 			this.join(interaction);
 		this.PLAYING = false; 
 		this.JUST_SKIPPED = true; // Doofopoly. 
-		//this.INSERT(interaction,0);
-		await this.INSERT(interaction,0);
+		if (_video_ != undefined) 
+			await this.accrue(_video_,0);
+		else
+			await this.INSERT(interaction,0);
+		
 		/// Learn to use promises! 
 		//console.log(this.PLAYLIST);
 		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
@@ -439,7 +457,9 @@ class CMD {
 				this.HISTORY.pop();
 
 			//console.log("We just created an audio resource of "+song+".");
-			this.player.play(this.resource);
+			await this.player.play(this.resource);
+			//this.TIMESTAMP = get_timestamp(this.PLAYLIST[0]) //, There are better ways we could do this, probably. 
+			this.HACK = get_timestamp(this.PLAYLIST[0]);
 
 		}
 		else
@@ -471,7 +491,7 @@ class CMD {
 		if (this.PLAYING)
 			++this.TIMESTAMP;
 		else
-			this.TIMESTAMP = 0;
+			this.TIMESTAMP = this.HACK;
 	}
 	abscond(interaction){
 		this.connection.destroy();

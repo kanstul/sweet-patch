@@ -114,8 +114,14 @@ exports.respond = function(interaction,msg) {
 }
 
 exports.get_timestamp = function(url) {
+	let fnl = parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
+	console.log("Get timestamp is returning "+fnl+'.');
+	console.log("Get timestamp is returning "+fnl+'.');
+	console.log("Get timestamp is returning "+fnl+'.');
+	console.log("Get timestamp is returning "+fnl+'.');
+	return fnl;
 	// Don't forget to adjust the function `Wind()` too! 
-	return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
+	//return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
 	// Thanks, `The Great Old One of Javascript`. 
 }
 

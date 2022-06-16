@@ -1,3 +1,6 @@
+// TODO: Save current progress in video so can play funny memes? 
+// TODO: Fix the fact that you can't fast-forward or rewind more than once because TIMESTAMP isn't adjusted properly. 
+// TODO: Ctrl+F "//,".
 // TODO: Rewrite `LIST()` and assorted functions to go off of the new `INFO` map. 
 // TODO: Make it `just-work` when you feed it a playlist. 
 // TODO: Add functionality to delete commands. \/\/.
