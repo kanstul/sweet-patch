@@ -69,6 +69,7 @@ class CMD {
 	JUST_SKIPPED = false;
 	TIMESTAMP = 0;
 	 INFO = new Map(); // Name better? 
+	PAUSED = false; // RK. 
 	connection = null;
 	player = null;
 	resource = null;
@@ -175,7 +176,11 @@ class CMD {
 	}
 	//stop(interaction) {
 	pause(interaction) {
-		this.player.pause();
+		if (!this.PAUSED)
+			this.player.pause();
+		else
+			this.player.unpause(); // RK. 
+		this.PAUSED = !this.PAUSED;
 		return ('Paused.');
 	}
 	resume(interaction) {
@@ -368,7 +373,7 @@ class CMD {
 					deplaylisted_songs.push(tmp[i].url);
 				}
 			}
-			else {
+			else if (Songish.isValidURL(song)) { // RK. 
 				let info = /*await*/ Songish.create(song);
 				if (Songish.isValidURL(song))
 					this.INFO.set(song,info);
@@ -395,6 +400,9 @@ class CMD {
 		
 		/// Learn to use promises! 
 		//console.log(this.PLAYLIST);
+		
+		if (!this.PLAYING)
+			return "Invalid input, was not able to play the given song.";
 		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}

@@ -1,5 +1,5 @@
 const { Client, Intents } = require('discord.js')
-const {guildId, tts_token, clientId} = require('./safe.json');
+const {tts_token, clientId} = require('./safe.json');
 const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } = require('@discordjs/voice'); // Comment this out later. 
 const {respond} = require('./utility.js');
 
@@ -34,20 +34,6 @@ tts_client.once('ready', ()=> {
 			console.log("Passed the `if` statement.");
 			console.log("Not undefined, now "+queue[0].content);
 			try {
-				if (connection == null) {
-					const channelId = client.guilds.cache.get(guildId).members.cache.get(clientId).voice.channelId
-					const adapterCreator = client.guilds.cache.get(guildId).voiceAdapterCreator;
-					const guildId = guildId;
-					connection = getVoiceConnection(msg.guildId);
-					connection = joinVoiceChannel({
-						channelId: channelId,
-						guildId: guildId,
-						adapterCreator: adapterCreator,
-						selfDeaf: false,
-						selfMute: false,
-					});
-					connection.subscribe(tts_player);
-				}
 				if (queue[0].content.length <= MAX_LENGTH) {
 					enunciate(queue[0].content);
 				}
@@ -66,8 +52,8 @@ tts_client.once('ready', ()=> {
 				console.log(e);
 			}
 		}
-		//console.log(queue);
-	},1/*000*/);
+		console.log(queue);
+	},1000);
 });
 
 tts_client.on('interactionCreate', async interaction => {

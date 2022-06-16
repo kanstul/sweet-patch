@@ -113,10 +113,13 @@ exports.respond = function(interaction,msg) {
 }
 
 exports.get_timestamp = function(url) {
-	let i = url.length-1;
-	while (!isNaN(url[i]))
+	let i = url.length-1 - 1 ; // RK. 
+	//,while (!isNaN(url[i]))
+	while (url[i] != 't' && url[i+1] != 't' && i > 0)
 		--i;
-	++i;
+	++i; // RK. 
+	if (i <= 0)
+		return 0;
 	let fnl = 0;
 	for (;i<url.length;++i) {
 		fnl *= 10;
@@ -126,11 +129,14 @@ exports.get_timestamp = function(url) {
 	console.log((/t=(\d+)/.exec(url)));
 	let fnl = parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
 	*/
+	fnl = fnl ?? 0;
+	if (isNaN(fnl))
+		fnl = 0;
 	console.log("Get timestamp is returning "+fnl+'.');
 	console.log("Get timestamp is returning "+fnl+'.');
 	console.log("Get timestamp is returning "+fnl+'.');
 	console.log("Get timestamp is returning "+fnl+'.');
-	return fnl;
+	return fnl ?? 0;
 	// Don't forget to adjust the function `Wind()` too! 
 	//return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
 	// Thanks, `The Great Old One of Javascript`. 
