@@ -1,3 +1,4 @@
+// If you want to wipe every command, look at `test(interaction)` in `commands.js`.
 exports.initialize_commands = function(initialize) { // Maybe should rename. 
 	// Add another parameter to wipe all commands in the future, that'd be cool. 
 
@@ -47,8 +48,6 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 	]
 		.map(command => command.toJSON());
 
-	// Add functionality to wipe commands.  // TAGYOUIT. 
-	// if (wipe_commands) { /* do stuff */ } 
 	if (initialize) 
 	{
 		const { REST } = require('@discordjs/rest');

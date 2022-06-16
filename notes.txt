@@ -1,8 +1,7 @@
+// TODO: Sigmoid, (x/(1+abs(x))); 
 // TODO: Save current progress in video so can play funny memes? 
 // TODO: Ctrl+F "//,".
 // TODO: Rewrite `LIST()` and assorted functions to go off of the new `INFO` map. 
-// TODO: Add functionality to delete commands. \/\/.
-// TODO: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
 // TODO: Make sure that `play` isn't fucking things up, test it good. 
 // TODO: Make SILLY_MODE and all the rest `const` in `commands.js`, somehow. 
 // TODO: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
@@ -57,3 +56,5 @@
 // DONE: Make it `just-work` when you feed it a playlist. 
 // DONE: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
 // DONE: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s.  // Worked past this one. 
+// DONE: Add functionality to delete commands. \/\/.
+// DONE: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
