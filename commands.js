@@ -236,7 +236,10 @@ class CMD {
 		}
 	}
 
-	what(interaction) {
+	async what(interaction) {
+		if (!this.PLAYING) 
+			return "Nothing currently playing.";
+		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
 		return "Currently playing is: "+this.PLAYLIST[0]+'.';
 	}
 	set(interaction) {
