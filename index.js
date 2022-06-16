@@ -83,6 +83,7 @@ try {
 		//console.log(answer);
 		//interaction.reply(answer);
 		//interaction.reply("Generic reply.");
+		answer = (typeof answer === 'string')? answer : "Severe error, function returned an object that was of type `"+(typeof answer)+"` rather than of type `string`.";
 		respond(interaction,answer);
 	}
 	catch (error) {

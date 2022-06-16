@@ -112,11 +112,6 @@ class CMD {
 		{
 			////interaction.content = 'Hahahahah.';
 			return await this.play(interaction,videos[0].url);
-			/*
-			this.join(interaction);
-			this.PLAYLIST.unshift(videos[0].url); // Could make this give a choice of three videos like that other bot from forever ago did. 
-			return this.next(interaction);
-			*/
 		}
 	}
 
@@ -129,6 +124,7 @@ class CMD {
 		//console.log(this.INFO);
 		//console.log(interaction.member.guild.commands.cache);
 		return "Called the test function.";
+		//return new Object();
 	}
 
 	async ResolveINFO() { // This is more or less a garbage collector. 
@@ -190,6 +186,12 @@ class CMD {
 		let guildId = interaction.guildId;
 		let channelId = interaction.member.voice.channelId;
 		let adapterCreator = interaction.guild.voiceAdapterCreator;
+		//console.log("IN JOIN.");
+		//console.log(guildId);
+		//console.log(channelId);
+		//console.log(adapterCreator);
+		if (channelId == null)
+			return "You are not in a voice channel.";
 
 		this.connection = getVoiceConnection(guildId);
 
@@ -496,7 +498,7 @@ class CMD {
 			++this.TIMESTAMP;
 		//console.log(this.TIMESTAMP);
 	}
-	abscond(interaction){
+	leave(interaction){
 		this.connection.destroy();
 		return "Disconnected from voice channel.";
 	}

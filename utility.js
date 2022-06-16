@@ -12,7 +12,8 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 
 	const commands = [
 		new SlashCommandBuilder().setName('help').setDescription('Lists all commands the bot can perform, and their descriptions.'),
-		new SlashCommandBuilder().setName('play').setDescription('==> Immediately joins the channel you\'re in and plays the given song.\n').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
+		new SlashCommandBuilder().setName('play').setDescription('==> Immediately joins the channel you\'re in and plays the given song.').addStringOption(option => option.setName('url').setDescription('The song played.').setRequired(true)),
+		new SlashCommandBuilder().setName('search').setDescription('Searches for a YouTube video and plays the first result.\n').addStringOption(opt=>opt.setName('query').setDescription('The search terms used.').setRequired(true)),
 		new SlashCommandBuilder().setName('push').setDescription('Appends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song appended.').setRequired(true)),
 		new SlashCommandBuilder().setName('jump').setDescription('Prepends song to playlist.').addStringOption(option => option.setName('url').setDescription('The song prepended.').setRequired(true)),
 		new SlashCommandBuilder().setName('insert').setDescription('Inserts a given song at a provided index.').addStringOption(opt=>opt.setName('url').setDescription('The song inserted.').setRequired(true)).addIntegerOption(opt=>opt.setName('index').setDescription('The index which the song will be inserted at.').setRequired(true)),
@@ -31,18 +32,17 @@ exports.initialize_commands = function(initialize) { // Maybe should rename.
 		new SlashCommandBuilder().setName('set').setDescription('Sets the volume.').addNumberOption(option => option.setName('level').setDescription('The new volume level.').setRequired(true)),
 		new SlashCommandBuilder().setName('damp').setDescription('Sets how much the volume is damped when people start talking, send 100 to functionally disable.').addNumberOption(option => option.setName('damp').setDescription('The new damping level.').setRequired(true)),
 		new SlashCommandBuilder().setName('fade').setDescription('==> Sets the amount of time it takes to fade in; set low to functionally disable.').addIntegerOption(option => option.setName('fade').setDescription('The new fade level.').setRequired(true)),
-		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
 		new SlashCommandBuilder().setName('what').setDescription('Responds with currently playing song.'),
-		new SlashCommandBuilder().setName('kick').setDescription('Sometimes fixes the bot.'),
-		new SlashCommandBuilder().setName('search').setDescription('Searches for a YouTube video and plays the first result.').addStringOption(opt=>opt.setName('query').setDescription('The search terms used.').setRequired(true)),
+		new SlashCommandBuilder().setName('kick').setDescription('Undefined behavior, do not use.'),
 		new SlashCommandBuilder().setName('test').setDescription('A test function, it should only be used by the developer.  REMOVE ME.').addStringOption(opt=>opt.setName('thisisjustfortesting').setDescription('Test.').setRequired(true)),
-		new SlashCommandBuilder().setName('abscond').setDescription('Disconnect bot from voice channel.'),
+		new SlashCommandBuilder().setName('join').setDescription('Joins the voice channel that you\'re in.'),
+		new SlashCommandBuilder().setName('leave').setDescription('Disconnect bot from voice channel.'),
 		new SlashCommandBuilder().setName('drop').setDescription('How much faster it fades out than fades in.').addIntegerOption(option => option.setName('drop').setDescription('The new drop level.').setRequired(true)),
 		new SlashCommandBuilder().setName('clear').setDescription('Empties the playlist.'),
 		new SlashCommandBuilder().setName('debounce').setDescription('Sets how many milliseconds someone must start or stop talking for before the bot will react.').addIntegerOption(option => option.setName('debounce').setDescription('The new debounce level.').setRequired(true)),
-		new SlashCommandBuilder().setName('timestamp').setDescription('Returns the amount of time the current song has been playing for.'),
 		new SlashCommandBuilder().setName('ttsdamp').setDescription('Toggles whether or not damping triggers when Amai reads commands.'),
-		new SlashCommandBuilder().setName('rewind').setDescription('Rewinds the current song.').addIntegerOption(option => option.setName('seconds').setDescription('How many seconds to rewind.').setRequired(true)),
+		new SlashCommandBuilder().setName('timestamp').setDescription('Returns the amount of time the current song has been playing for.'),
+		new SlashCommandBuilder().setName('rewind').setDescription('\nRewinds the current song.').addIntegerOption(option => option.setName('seconds').setDescription('How many seconds to rewind.').setRequired(true)),
 		new SlashCommandBuilder().setName('fastforward').setDescription('Fast-forwards current song.').addIntegerOption(option => option.setName('seconds').setDescription('How many seconds to push the song forward.').setRequired(true)),
 		// Use commas. 
 	]
