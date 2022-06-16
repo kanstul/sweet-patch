@@ -90,7 +90,6 @@ class CMD {
 	REQUIRE_ROLE_FOR_VOLUME = false;
 	VOLUME_USERS = "everyone";
 	DAMP_FOR_AMAI = false;
-		HACK = 0; //,
 
 	constructor(settings,player){ // <===
 		this.player = player;
@@ -150,7 +149,7 @@ class CMD {
 		//return parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
 		let fnl = this.TIMESTAMP/1000 + seconds;
 		console.log("In wind, PLAYLIST[0] is "+this.PLAYLIST[0]+'.');
-		this.PLAYLIST[0] = this.PLAYLIST[0].concat("?t=",Math.floor((this.TIMESTAMP/1000)+seconds)); // Do we actually need the `Math.floor`?  // Doofopoly.  (Not really). 
+		this.PLAYLIST[0] = this.PLAYLIST[0].concat("?t=",Math.floor(fnl)); // Do we actually need the `Math.floor`?  // Doofopoly.  (Not really). 
 		console.log("In wind, just shoved "+this.PLAYLIST[0]+" on, let's see how that goes.");
 		this.play_front();
 		//this.skip();
@@ -458,8 +457,7 @@ class CMD {
 
 			//console.log("We just created an audio resource of "+song+".");
 			await this.player.play(this.resource);
-			//this.TIMESTAMP = get_timestamp(this.PLAYLIST[0]) //, There are better ways we could do this, probably. 
-			this.HACK = get_timestamp(this.PLAYLIST[0]);
+			this.TIMESTAMP = get_timestamp(this.PLAYLIST[0])*1000 //, There are better ways we could do this, probably. 
 
 		}
 		else
@@ -490,8 +488,7 @@ class CMD {
 		//console.log("Playing at "+percentage*this.VOLUME);
 		if (this.PLAYING)
 			++this.TIMESTAMP;
-		else
-			this.TIMESTAMP = this.HACK;
+		//console.log(this.TIMESTAMP);
 	}
 	abscond(interaction){
 		this.connection.destroy();

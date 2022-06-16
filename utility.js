@@ -114,7 +114,19 @@ exports.respond = function(interaction,msg) {
 }
 
 exports.get_timestamp = function(url) {
+	let i = url.length-1;
+	while (!isNaN(url[i]))
+		--i;
+	++i;
+	let fnl = 0;
+	for (;i<url.length;++i) {
+		fnl *= 10;
+		fnl += Number(url[i]);
+	}
+	/*
+	console.log((/t=(\d+)/.exec(url)));
 	let fnl = parseInt((/t=(\d+)/.exec(url)??[0,0])[1]);
+	*/
 	console.log("Get timestamp is returning "+fnl+'.');
 	console.log("Get timestamp is returning "+fnl+'.');
 	console.log("Get timestamp is returning "+fnl+'.');
