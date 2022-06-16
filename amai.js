@@ -4,6 +4,7 @@ const { AudioPlayerStatus, createAudioResource, createAudioPlayer, joinVoiceChan
 const {respond} = require('./utility.js');
 
 const DiscordTTS = require('discord-tts');
+const {PEDANTIC_AMAI = false} = require('config.json');
 
 const tts_player = createAudioPlayer();
 const tts_client = new Client({ 
@@ -84,7 +85,6 @@ tts_client.on('messageCreate', async (/*ignore,*/msg) => {
 	}
 });
 
-const ONLY_READ_NOW_PLAYINGS = true;
 
 function enunciate(string) {
 	console.log("Enunciating "+string+'.');
@@ -92,7 +92,7 @@ function enunciate(string) {
 	//console.log("Enunciate was called.");
 	if (string.startsWith(name))
 		string = "..Now playing.  ".concat(string.slice(name.length));
-	else if (ONLY_READ_NOW_PLAYINGS){
+	else if (!PEDANTIC_AMAI){
 		queue[0].shift();
 		PLAYING = false;
 		return; // !!!

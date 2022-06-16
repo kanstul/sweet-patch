@@ -17,5 +17,6 @@
 	"DROP": 10,
 	"DAMP_FOR_AMAI": false,
 	"DEBOUNCE": 50,
-	"QUEUE_MESSAGES": true
+	"QUEUE_MESSAGES": true,
+	"PEDANTIC_AMAI": false
 }

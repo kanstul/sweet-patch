@@ -116,8 +116,8 @@ class CMD {
 	}
 
 	async test(interaction) {
-		let {MYID} = require('./safe.json');
-		if (interaction.options.getString('thisisjustfortesting') === 'WIPE ALL COMMANDS NOW.' && interaction.user.id === MYID){
+		let {ADMINID} = require('./safe.json');
+		if (interaction.options.getString('thisisjustfortesting') === 'WIPE ALL COMMANDS NOW.' && interaction.user.id === ADMINID){
 			guild.commands.set([]);
 			return "WIPING ALL COMMANDS.";
 		}

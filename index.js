@@ -109,3 +109,10 @@ player.on(AudioPlayerStatus.Idle, () => {
 },1);
 
 client.login(token);
+
+process.on('SIGINT', () => {
+	if (Cmd.connection != null)
+		Cmd.leave();
+	console.log("\nExiting.");
+	process.exit(0);
+});

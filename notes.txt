@@ -1,4 +1,3 @@
-// TODO: Sigmoid, (x/(1+abs(x))); 
 // TODO: Save current progress in video so can play funny memes? 
 // TODO: Ctrl+F "//,".
 // TODO: Make sure that `play` isn't fucking things up, test it good. 
@@ -19,7 +18,6 @@
 // TODO: CTRL+F "Fix later." 
 // TODO: Add a function to remove videos by URL/title/whatever. 
 // TODO: You know, `halt` would be a good name for something.  We should use that. 
-// TODO: Rename `abscond` to `leave`? 
 // TODO: Make `LOG` betterer. 
 // TODO: Have it send a message every time it starts playing a new song?  That'd be a trick.  Send it to the last channel it received a command from, maybe? 
 // TODO: Fix the fact that disabling autoplay doesn't actually disable autoplay if it's enabled when you `push` but not when you `join`. 
@@ -43,6 +41,10 @@
 //NOTE:
 // NOTE: Weird things happen with a FADE_TIME of `0`, locked it to `ONE` with a Math.min. 
 
+CANCELLED:
+// TODO: Sigmoid, (x/(1+abs(x))); 
+// DONE: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s.  // Worked past this one. 
+
 //DONE: 
 // DONE: Consider replacing every `interaction.reply` with a function that `interaction.reply`s and ALSO logs it to the console; might be cleaner. 
 // DONE: Implement YouTube search function. 
@@ -54,7 +56,7 @@
 // DONE: Add ff/rwd. 
 // DONE: Make it `just-work` when you feed it a playlist. 
 // DONE: Change everything from `ytdl` to `play-dl`, particularly the functions that get song information. 
-// DONE: Fix things so that `play_front()` isn't `async` anymore, it's dumb!  Fix all the `await play_front()`s.  // Worked past this one. 
 // DONE: Add functionality to delete commands. \/\/.
 // DONE: Add delete interactions feature in `initialize_commands()` in `utility.js`. 
 // DONE: Make it not shit itself and die when it doesn't receive a string in response from a function it calls. 
+// DONE: Rename `abscond` to `leave`? 
