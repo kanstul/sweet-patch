@@ -34,7 +34,7 @@ tts_client.once('ready', ()=> {
 			console.log("Passed the `if` statement.");
 			console.log("Not undefined, now "+queue[0].content);
 			try {
-				if (connection == null) {
+				if (connection == null /* || Not connected to the same channel as Sweet. */) {
 					const channelId = client.guilds.cache.get(guildId).members.cache.get(clientId).voice.channelId
 					const adapterCreator = client.guilds.cache.get(guildId).voiceAdapterCreator;
 					const guildId = guildId;
@@ -131,4 +131,11 @@ tts_player.on(AudioPlayerStatus.Idle, () => {
 	console.log("Idle.");
 	PLAYING = false;
 	queue.shift();
+});
+
+process.on('SIGINT', () => {
+	if (connection != null)
+		connection.destroy();
+	console.log("\nExiting Amai.");
+	process.exit(0);
 });

@@ -7,6 +7,8 @@ You can feed it playlists or timestamped videos and it'll destructure the playli
 
 `Use instructions`. 
 
+You'll need to invite **your** bot to your server; it'll need `applications.commands` as well as `bot` permissions. 
+
 Make sure you have a version of `node` later then 16.6 installed. 
 
 Rename `safe.json.bak` to `safe.json` and fill out the appropriate fields accordingly. 
@@ -22,6 +24,8 @@ You'll need two bots if you want text-to-speech to work, adjust `tts_token` and 
 If you want to enable text-to-speech features, type `node amai.js` *after* `make`, in another terminal. 
 
 Set `PEDANTIC_AMAI` in `config.json` to false if you want it to read every single statement the bot issues. 
+
+Amai will need permissions to read messages in order to function. 
 
 .
 

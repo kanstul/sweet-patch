@@ -184,6 +184,7 @@ class CMD {
 		return ('Paused.');
 	}
 	resume(interaction) {
+		this.PAUSED = false;
 		this.player.unpause(); // Use && and fit into a single line instead? 
 		return ('Resumed.'); 
 	}
@@ -244,7 +245,8 @@ class CMD {
 	async what(interaction) {
 		if (!this.PLAYING) 
 			return "Nothing currently playing.";
-		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
+		//interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
+		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title+", by "+(await PlayDL.video_basic_info(this.PLAYLIST[0])).video_details.channel+'.'); // RK. 
 		return "Currently playing is: "+this.PLAYLIST[0]+'.';
 	}
 	set(interaction) {
@@ -403,7 +405,7 @@ class CMD {
 		
 		if (!this.PLAYING)
 			return "Invalid input, was not able to play the given song.";
-		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title);
+		interaction.editReply("AMAI "+(await this.INFO.get(this.PLAYLIST[0])).title+", by "+(await PlayDL.video_basic_info(this.PLAYLIST[0])).video_details.channel+'.'); // RK. 
 		return "Now playing "+this.PLAYLIST[0]+'.';
 	}
 	// Make this function private \/. 
@@ -441,6 +443,7 @@ class CMD {
 	}
 
 	async play_front() { // Rename to `next`?  // TAGTAG. 
+			this.PAUSED = false; // TODO. 
 
 		this.JUST_SKIPPED = false // Doofopoly. 
 
@@ -508,6 +511,8 @@ class CMD {
 		if (this.PLAYING)
 			++this.TIMESTAMP;
 		//console.log(this.TIMESTAMP);
+		//,if (this.connection) //, // MARK. 
+			//,console.log(this.connection.listenerCount());
 	}
 	leave(interaction){
 		this.connection.destroy();

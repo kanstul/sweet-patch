@@ -56,6 +56,8 @@ let down = false;
 		//,let tmp = client.guilds.cache.get(guildId).channels.cache.get(clientId)
 		//,if (tmp != undefined) 
 			//,console.log(tmp.voice.channel.members.size());
+		//,if (Cmd.connection != null)
+			//,console.log(Cmd.connection.listenerCount()); //,
 	},1);
 
 });
